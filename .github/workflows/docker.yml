@@ -53,3 +53,17 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # GHCR crea los packages privados por defecto; fijar visibilidad pública
+      # (requiere packages:write, que el GITHUB_TOKEN ya tiene).
+      - name: Make package public
+        run: |
+          PACKAGE="ghcr.io/${{ github.repository }}"
+          REPO_NAME="${{ github.repository }}"
+          OWNER="${{ github.repository_owner }}"
+          PACKAGE_NAME="$(basename "$REPO_NAME")"
+          curl -s -X PATCH \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/user/packages/container/$PACKAGE_NAME" \
+            -d '{"visibility":"public"}' || true
