@@ -65,7 +65,10 @@ volumes:
 | `OIDC_ISSUER` | sí* | — | Issuer de PocketID (p. ej. `https://id.tudominio.cl`) |
 | `OIDC_CLIENT_ID` | sí* | — | Client ID del panel admin |
 | `OIDC_CLIENT_SECRET` | no | — | Client secret (si el cliente es confidencial) |
+| `OIDC_AUDIENCE` | no | — | Audiencia exigida al validar access tokens OAuth del MCP |
 | `ADMIN_ALLOWED_SUBS` | no | — | Subs OIDC permitidos en el admin (separados por coma) |
+| `COOKIE_SECURE` | no | `true` | Flag `Secure` en cookies (poner `false` solo en HTTP local) |
+| `BODY_LIMIT` | no | `1048576` | Límite de cuerpo en bytes para API/MCP/unlock |
 
 \* OIDC es opcional: sin `OIDC_ISSUER`/`OIDC_CLIENT_ID` el panel admin queda deshabilitado,
 pero la API y los enlaces públicos funcionan.

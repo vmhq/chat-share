@@ -1,10 +1,11 @@
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { serve } from "@hono/node-server";
 import { loadConfig } from "./config";
 import { apiRoutes } from "./routes/api";
 import { publicRoutes } from "./routes/public";
 import { adminRoutes } from "./routes/admin";
-import { handleMcpRequest } from "./mcp";
+import { handleMcpAuth } from "./mcpAuth";
 import { OidcClient } from "./oidc";
 import { baseUrl } from "./util";
 
@@ -13,6 +14,12 @@ async function main() {
   const oidc = new OidcClient(cfg);
 
   const app = new Hono();
+
+  // Límite de cuerpo global (API, MCP, unlock). Protege de payloads que agotan memoria.
+  app.use("*", bodyLimit({
+    maxSize: cfg.bodyLimit,
+    onError: (c) => c.json({ error: "Cuerpo demasiado grande" }, 413),
+  }));
 
   app.get("/", (c) =>
     c.html(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>chat-share</title>
@@ -44,50 +51,7 @@ ${cfg.oidcIssuer ? `<p><a href="/admin">Panel de administración</a></p>` : ""}
 
   // MCP endpoint (stateless streamable HTTP).
   // Auth: acepta API key (AGENT_API_KEY) O access token de PocketID (OAuth).
-  app.all("/mcp", async (c) => {
-    const auth = c.req.header("Authorization") ?? "";
-    const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-
-    // 1) API key
-    if (cfg.agentApiKeys.includes(token)) {
-      return handleMcpRequest(c.req.raw);
-    }
-
-    // 2) Access token OAuth emitido por PocketID (solo si OIDC está habilitado)
-    if (token && cfg.oidcIssuer) {
-      const payload = await oidc.verifyAccessToken(token);
-      if (payload) {
-        const authInfo = {
-          token,
-          clientId: String(payload.client_id ?? payload.sub ?? "oauth"),
-          scopes: Array.isArray(payload.scope)
-            ? payload.scope
-            : typeof payload.scope === "string"
-              ? payload.scope.split(" ")
-              : [],
-          expiresAt: typeof payload.exp === "number" ? payload.exp : undefined,
-          extra: {
-            sub: payload.sub,
-            email: payload.email,
-            name: payload.name,
-            provider: "pocketid",
-          },
-        };
-        return handleMcpRequest(c.req.raw, authInfo);
-      }
-    }
-
-    return new Response(
-      JSON.stringify({ error: "Unauthorized: se requiere una API key o un access token válido" }),
-      {
-        status: 401,
-        headers: {
-          "Content-Type": "application/json",
-          "WWW-Authenticate": `Bearer resource_metadata="${cfg.baseUrl}/.well-known/oauth-protected-resource/mcp"`,
-        },
-      }
-    );
-  });
+  app.all("/mcp", (c) => handleMcpAuth(c, cfg, oidc));
 
   if (cfg.oidcIssuer) {
     try {

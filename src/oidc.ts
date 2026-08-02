@@ -23,10 +23,14 @@ export class OidcClient {
   async init(): Promise<void> {
     if (!this.cfg.oidcIssuer) return;
     const base = this.cfg.oidcIssuer.replace(/\/+$/, "");
-    const res = await fetch(`${base}/.well-known/openid-configuration`);
+    const res = await fetch(`${base}/.well-known/openid-configuration`, {
+      signal: AbortSignal.timeout(10_000),
+    });
     if (!res.ok) throw new Error(`OIDC discovery falló: ${res.status}`);
     this.discovery = (await res.json()) as OidcDiscovery;
-    this.jwks = createRemoteJWKSet(new URL(this.discovery.jwks_uri));
+    this.jwks = createRemoteJWKSet(new URL(this.discovery.jwks_uri), {
+      timeoutDuration: 10_000,
+    });
     console.log(`[oidc] Discovery OK para ${this.cfg.oidcIssuer}`);
   }
 
@@ -62,6 +66,7 @@ export class OidcClient {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body,
+      signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) {
       const txt = await res.text();
@@ -87,6 +92,7 @@ export class OidcClient {
 
   /**
    * Valida un access token (JWT) emitido por PocketID contra sus JWKS.
+   * Exige issuer y, si está configurada, la audiencia (OIDC_AUDIENCE).
    * Devuelve el payload (sub, scopes, exp, etc.) si es válido, o null si no.
    * NOTE: solo funciona si PocketID emite access tokens como JWT firmados.
    */
@@ -95,7 +101,7 @@ export class OidcClient {
     try {
       const { payload } = await jwtVerify(accessToken, this.jwks, {
         issuer: this.discovery.issuer,
-        // audience: el access token puede no llevar audience del RS; no lo exigimos
+        audience: this.cfg.oidcAudience ?? undefined,
       });
       if (payload.exp && payload.exp < Date.now() / 1000) return null;
       return payload;

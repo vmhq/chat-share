@@ -1,3 +1,5 @@
+import { setBaseUrl } from "./util";
+
 export interface AppConfig {
   port: number;
   baseUrl: string;
@@ -7,7 +9,10 @@ export interface AppConfig {
   oidcIssuer: string | null;
   oidcClientId: string | null;
   oidcClientSecret: string | null;
+  oidcAudience: string | null;
   adminAllowedSubs: string[] | null;
+  cookieSecure: boolean;
+  bodyLimit: number;
 }
 
 export function loadConfig(): AppConfig {
@@ -31,15 +36,21 @@ export function loadConfig(): AppConfig {
     process.exit(1);
   }
 
+  const baseUrl = (process.env.BASE_URL ?? "http://localhost:3000").replace(/\/+$/, "");
+  setBaseUrl(baseUrl);
+
   return {
     port: parseInt(process.env.PORT ?? "3000", 10),
-    baseUrl: (process.env.BASE_URL ?? "http://localhost:3000").replace(/\/+$/, ""),
+    baseUrl,
     dbPath: process.env.DB_PATH ?? "./data/chat-share.db",
     agentApiKeys: process.env.AGENT_API_KEY!.split(",").map((k) => k.trim()).filter(Boolean),
     sessionSecret,
     oidcIssuer,
     oidcClientId,
     oidcClientSecret: process.env.OIDC_CLIENT_SECRET?.trim() || null,
+    oidcAudience: process.env.OIDC_AUDIENCE?.trim() || null,
     adminAllowedSubs,
+    cookieSecure: (process.env.COOKIE_SECURE ?? "true").toLowerCase() !== "false",
+    bodyLimit: parseInt(process.env.BODY_LIMIT ?? String(1024 * 1024), 10),
   };
 }

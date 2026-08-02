@@ -1,14 +1,25 @@
 import { Hono } from "hono";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import type { AppConfig } from "../config";
 import { OidcClient, issueSession, verifySession, randomToken, type SessionClaims } from "../oidc";
 import { listChats, revokeChat } from "../service";
 import { buildRows, adminPageHtml } from "../views/adminPage";
 import { baseUrl } from "../util";
 
+// Token CSRF stateless: HMAC(sessionSecret, sub) — derivado de la sesión, sin estado extra.
+function csrfToken(cfg: AppConfig, sub: string): string {
+  return createHmac("sha256", cfg.sessionSecret).update(`csrf:${sub}`).digest("hex");
+}
+
+function verifyCsrf(cfg: AppConfig, sub: string, token: string | undefined): boolean {
+  if (!token) return false;
+  const expected = csrfToken(cfg, sub);
+  return cryptoVerifyStrings(token, expected);
+}
+
 function pkcePair(): { verifier: string; challenge: string } {
   const verifier = randomBytes(32).toString("base64url");
-  const challenge = createHash("sha256").update(verifier).digest("base64url");
+  const challenge = createHash("sha256").update(verifier).digest("base64url").replace(/=+$/, "");
   return { verifier, challenge };
 }
 
@@ -39,10 +50,17 @@ export function adminRoutes(cfg: AppConfig, oidc: OidcClient) {
   app.get("/admin", (c) => {
     const claims = c.get("adminUser") as SessionClaims;
     const rows = buildRows(listChats());
-    return c.html(adminPageHtml(rows, claims.email ?? claims.sub, baseUrl()));
+    return c.html(adminPageHtml(rows, claims.email ?? claims.sub, baseUrl(), csrfToken(cfg, claims.sub)));
   });
 
-  app.post("/admin/chats/:id/revoke", (c) => {
+  app.post("/admin/chats/:id/revoke", async (c) => {
+    const claims = c.get("adminUser") as SessionClaims;
+    // CSRF: requiere el token derivado de la sesión en el body del formulario.
+    const form = await c.req.parseBody();
+    const token = typeof form["_csrf"] === "string" ? form["_csrf"] : undefined;
+    if (!verifyCsrf(cfg, claims.sub, token)) {
+      return c.text("Token CSRF inválido. Recarga la página e intenta de nuevo.", 403);
+    }
     const id = c.req.param("id");
     revokeChat(id);
     return c.redirect("/admin");
@@ -59,9 +77,9 @@ export function adminRoutes(cfg: AppConfig, oidc: OidcClient) {
     const authUrl = oidc.authorizeUrl(state, nonce);
     // Guardamos state/nonce/verifier en cookies HttpOnly.
     const cookies = [
-      cookie("oidc_state=" + state, 600),
-      cookie("oidc_nonce=" + nonce, 600),
-      cookie("pkce_verifier=" + verifier, 600),
+      cookie(cfg, "oidc_state=" + state, 600),
+      cookie(cfg, "oidc_nonce=" + nonce, 600),
+      cookie(cfg, "pkce_verifier=" + verifier, 600),
     ];
     c.header("Set-Cookie", cookies.join("; "));
     return c.redirect(authUrl);
@@ -75,7 +93,7 @@ export function adminRoutes(cfg: AppConfig, oidc: OidcClient) {
     if (!code) return c.text("Falta el parámetro code.", 400);
 
     const storedState = getCookie(cookieHeader, "oidc_state");
-    if (!state || !storedState || !cryptoVerifyStrings(state, storedState, cfg.sessionSecret)) {
+    if (!state || !storedState || !cryptoVerifyStrings(state, storedState)) {
       return c.text("Estado OIDC inválido.", 400);
     }
 
@@ -99,13 +117,14 @@ export function adminRoutes(cfg: AppConfig, oidc: OidcClient) {
     };
 
     const token = issueSession(cfg, session);
-    c.header("Set-Cookie", cookie(`${SESSION_COOKIE}=${token}`, 8 * 3600));
+    c.header("Set-Cookie", cookie(cfg, `${SESSION_COOKIE}=${token}`, 8 * 3600, "/admin"));
     return c.redirect("/admin");
   });
 
   // ---------- Logout ----------
   app.get("/admin/logout", (c) => {
-    c.header("Set-Cookie", `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`);
+    const secure = cfg.cookieSecure ? "; Secure" : "";
+    c.header("Set-Cookie", `${SESSION_COOKIE}=; HttpOnly; Path=/admin; SameSite=Lax${secure}; Max-Age=0`);
     return c.redirect("/admin/login");
   });
 
@@ -118,13 +137,15 @@ function getCookie(header: string, name: string): string | undefined {
   return m ? m[1] : undefined;
 }
 
-function cookie(nameValue: string, maxAgeSeconds = 3600): string {
-  return `${nameValue}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${maxAgeSeconds}`;
+function cookie(cfg: AppConfig, nameValue: string, maxAgeSeconds: number, path = "/"): string {
+  const secure = cfg.cookieSecure ? "; Secure" : "";
+  return `${nameValue}; HttpOnly; Path=${path}; SameSite=Lax${secure}; Max-Age=${maxAgeSeconds}`;
 }
 
-function cryptoVerifyStrings(a: string, b: string, secret: string): boolean {
-  // Firma HMAC sobre ambos para comparación de igualdad
-  const ha = createHash("sha256").update(a + secret).digest("hex");
-  const hb = createHash("sha256").update(b + secret).digest("hex");
-  return ha === hb;
+function cryptoVerifyStrings(a: string, b: string): boolean {
+  // Comparación en tiempo constante de dos strings
+  const ha = Buffer.from(a);
+  const hb = Buffer.from(b);
+  if (ha.length !== hb.length) return false;
+  return timingSafeEqual(ha, hb);
 }

@@ -12,13 +12,25 @@ function cookieName(id: string): string {
   return `unlock_${id}`;
 }
 
-// Rate-limit en memoria por IP para el endpoint de contraseña.
+// Zona horaria de visualización (Chile continental).
+const TZ = "America/Santiago";
+
+// Rate-limit en memoria por (IP, chat) para el endpoint de contraseña.
+// Clave compuesta IP|chat evita que un atacante bloquee el acceso a un chat popular.
 const attempts = new Map<string, { count: number; resetAt: number }>();
-function rateLimited(ip: string): boolean {
+const MAX_ATTEMPTS_ENTRIES = 10_000;
+function rateLimited(ip: string, chatId: string): boolean {
+  const key = `${ip}|${chatId}`;
   const now = Date.now();
-  const rec = attempts.get(ip);
+  const rec = attempts.get(key);
   if (!rec || now > rec.resetAt) {
-    attempts.set(ip, { count: 1, resetAt: now + 5 * 60_000 });
+    // Mantener el mapa acotado: purgar entradas expiradas si crece demasiado.
+    if (attempts.size > MAX_ATTEMPTS_ENTRIES) {
+      for (const [k, v] of attempts) {
+        if (now > v.resetAt) attempts.delete(k);
+      }
+    }
+    attempts.set(key, { count: 1, resetAt: now + 5 * 60_000 });
     return false;
   }
   rec.count += 1;
@@ -57,7 +69,7 @@ export function publicRoutes(cfg: AppConfig) {
         agent: fresh.agent,
         messages: parseMessages(fresh),
         views: fresh.views,
-        createdAt: new Date(fresh.created_at).toLocaleString("es-CL"),
+        createdAt: new Date(fresh.created_at).toLocaleString("es-CL", { timeZone: TZ }),
         locked: !!fresh.password_hash,
       }),
       200,
@@ -71,7 +83,7 @@ export function publicRoutes(cfg: AppConfig) {
     if (!row) return c.text("No encontrado", 404);
 
     const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    if (rateLimited(ip)) {
+    if (rateLimited(ip, id)) {
       return c.text("Demasiados intentos, intenta de nuevo en unos minutos.", 429);
     }
 
@@ -81,7 +93,8 @@ export function publicRoutes(cfg: AppConfig) {
     if (!ok) return c.html(passwordFormHtml(id, "Contraseña incorrecta"));
 
     const value = sign(id, cfg.sessionSecret);
-    c.header("Set-Cookie", `${cookieName(id)}=${value}; HttpOnly; Path=/s/${id}; SameSite=Lax; Max-Age=604800`);
+    const secure = cfg.cookieSecure ? "; Secure" : "";
+    c.header("Set-Cookie", `${cookieName(id)}=${value}; HttpOnly; Path=/s/${id}; SameSite=Lax${secure}; Max-Age=604800`);
     return c.redirect(`/s/${id}`);
   });
 

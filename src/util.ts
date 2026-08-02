@@ -4,8 +4,13 @@ import { customAlphabet } from "nanoid";
 const nano = customAlphabet("23456789abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ", 12);
 export const newId = () => nano();
 
+// Una sola fuente de verdad: loadConfig() lo setea desde BASE_URL.
+let configuredBaseUrl: string = "http://localhost:3000";
+export function setBaseUrl(url: string): void {
+  configuredBaseUrl = url.replace(/\/+$/, "");
+}
 export function baseUrl(): string {
-  return (process.env.BASE_URL ?? "http://localhost:3000").replace(/\/+$/, "");
+  return configuredBaseUrl;
 }
 
 export function parseExpiry(input?: string | null): number | null {

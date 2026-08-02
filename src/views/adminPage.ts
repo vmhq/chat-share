@@ -26,19 +26,22 @@ function esc(s: string): string {
   })[ch]!);
 }
 
+// Zona horaria de visualización (Chile continental).
+const TZ = "America/Santiago";
+
 const STATUS_BADGE: Record<string, string> = {
   active: "🟢",
   expired: "⏳",
   revoked: "🚫",
 };
 
-export function adminPageHtml(rows: AdminViewRow[], userEmail: string | undefined, baseUrl: string): string {
+export function adminPageHtml(rows: AdminViewRow[], userEmail: string | undefined, baseUrl: string, csrf: string): string {
   const trs = rows
     .map((v) => {
       const r = v.row;
       const url = `${baseUrl}/s/${r.id}`;
-      const created = new Date(r.created_at).toLocaleString("es-CL");
-      const expires = r.expires_at ? new Date(r.expires_at).toLocaleString("es-CL") : "nunca";
+      const created = new Date(r.created_at).toLocaleString("es-CL", { timeZone: TZ });
+      const expires = r.expires_at ? new Date(r.expires_at).toLocaleString("es-CL", { timeZone: TZ }) : "nunca";
       return `<tr>
         <td><a href="${esc(url)}" target="_blank" rel="noopener">${esc(r.title)}</a><br><span class="dim">${esc(r.id)}</span></td>
         <td>${esc(r.agent)}</td>
@@ -49,7 +52,7 @@ export function adminPageHtml(rows: AdminViewRow[], userEmail: string | undefine
         <td><span class="badge ${v.status}">${STATUS_BADGE[v.status] ?? "•"} ${v.status}</span></td>
         <td class="actions">
           <button class="copy" data-url="${esc(url)}">Copiar</button>
-          ${v.status !== "revoked" ? `<form method="post" action="/admin/chats/${esc(r.id)}/revoke" class="inline"><button class="danger" type="submit">Revocar</button></form>` : ""}
+          ${v.status !== "revoked" ? `<form method="post" action="/admin/chats/${esc(r.id)}/revoke" class="inline"><input type="hidden" name="_csrf" value="${esc(csrf)}"><button class="danger" type="submit">Revocar</button></form>` : ""}
         </td>
       </tr>`;
     })

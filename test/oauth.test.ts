@@ -3,7 +3,7 @@ import { spawn, type Subprocess } from "bun";
 import { Hono } from "hono";
 import { loadConfig } from "../src/config";
 import { OidcClient } from "../src/oidc";
-import { handleMcpRequest } from "../src/mcp";
+import { handleMcpAuth } from "../src/mcpAuth";
 import { apiRoutes } from "../src/routes/api";
 import { publicRoutes } from "../src/routes/public";
 
@@ -63,23 +63,7 @@ describe("MCP OAuth (PocketID)", () => {
         authorization_servers: cfg.oidcIssuer ? [cfg.oidcIssuer] : [],
       })
     );
-    app.all("/mcp", async (c) => {
-      const auth = c.req.header("Authorization") ?? "";
-      const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-      if (cfg.agentApiKeys.includes(token)) return handleMcpRequest(c.req.raw);
-      if (token && cfg.oidcIssuer) {
-        const payload = await oidc.verifyAccessToken(token);
-        if (payload) {
-          return handleMcpRequest(c.req.raw, {
-            token,
-            clientId: String(payload.client_id ?? payload.sub ?? "oauth"),
-            scopes: [],
-            extra: { sub: payload.sub, email: payload.email },
-          });
-        }
-      }
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
-    });
+    app.all("/mcp", (c) => handleMcpAuth(c, cfg, oidc));
     return app;
   }
 

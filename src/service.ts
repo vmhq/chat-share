@@ -101,7 +101,9 @@ export async function checkPassword(r: SharedChatRow, candidate: string): Promis
 
 export function parseMessages(r: SharedChatRow): Message[] {
   try {
-    return JSON.parse(r.messages) as Message[];
+    const parsed = JSON.parse(r.messages) as unknown;
+    const result = z.array(MessageSchema).safeParse(parsed);
+    return result.success ? result.data : [];
   } catch {
     return [];
   }
