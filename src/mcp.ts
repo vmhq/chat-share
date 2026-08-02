@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
+import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import { z } from "zod";
 import { createSharedChat, getChat, revokeChat } from "./service";
 import { baseUrl } from "./util";
@@ -30,7 +31,7 @@ const shareInputSchema = {
   agent: z.string().min(1).max(100).optional(),
 };
 
-export async function handleMcpRequest(request: Request): Promise<Response> {
+export async function handleMcpRequest(request: Request, authInfo?: AuthInfo): Promise<Response> {
   const server = new McpServer(
     {
       name: "chat-share",
@@ -51,14 +52,17 @@ export async function handleMcpRequest(request: Request): Promise<Response> {
         "(1h, 24h, 7d, 30d o nunca) antes de llamar a esta herramienta.",
       inputSchema: shareInputSchema,
     },
-    async (args) => {
+    async (args, extra) => {
       const title = args.title;
+      // Identidad del cliente autenticado (OAuth/API key via authInfo)
+      const who =
+        extra.authInfo?.extra?.email ?? extra.authInfo?.extra?.sub ?? args.agent ?? "mcp";
       const result = await createSharedChat({
         title,
         messages: args.messages,
         password: args.password,
         expires_in: args.expires_in,
-        agent: args.agent ?? "mcp",
+        agent: typeof who === "string" ? who : "mcp",
       });
       return {
         content: [
@@ -114,5 +118,5 @@ export async function handleMcpRequest(request: Request): Promise<Response> {
     sessionIdGenerator: undefined,
   });
   await server.connect(transport);
-  return transport.handleRequest(request);
+  return transport.handleRequest(request, authInfo ? { authInfo } : undefined);
 }

@@ -84,6 +84,25 @@ export class OidcClient {
     }
     return payload;
   }
+
+  /**
+   * Valida un access token (JWT) emitido por PocketID contra sus JWKS.
+   * Devuelve el payload (sub, scopes, exp, etc.) si es válido, o null si no.
+   * NOTE: solo funciona si PocketID emite access tokens como JWT firmados.
+   */
+  async verifyAccessToken(accessToken: string): Promise<Record<string, unknown> | null> {
+    if (!this.jwks || !this.discovery) return null;
+    try {
+      const { payload } = await jwtVerify(accessToken, this.jwks, {
+        issuer: this.discovery.issuer,
+        // audience: el access token puede no llevar audience del RS; no lo exigimos
+      });
+      if (payload.exp && payload.exp < Date.now() / 1000) return null;
+      return payload;
+    } catch {
+      return null;
+    }
+  }
 }
 
 // ---------- Sesión stateless firmada ----------

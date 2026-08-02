@@ -111,6 +111,16 @@ El endpoint `/mcp` es un servidor **MCP Streamable HTTP** (stateless). Tools:
 | `revoke_shared_chat` | Revoca un enlace (`id`). |
 | `get_shared_chat_info` | Metadatos de un enlace (`vistas`, `expires_at`, estado). |
 
+**Autenticación del MCP** — se aceptan dos mecanismos:
+
+1. **API key** (igual que la API REST): header `Authorization: Bearer <AGENT_API_KEY>`.
+2. **OAuth 2.0 contra PocketID**: el servidor es un *resource server* que delega la autorización
+   en PocketID. El flujo de descubrimiento estándar:
+   - Metadata: `https://share.tudominio.cl/.well-known/oauth-protected-resource/mcp`
+   - El cliente hace login OAuth en PocketID y recibe un *access token* que envía como
+     `Authorization: Bearer <access_token>`.
+   - El servidor valida el token contra las **JWKS** de PocketID (config `OIDC_ISSUER`).
+
 **Configurar en Hermes** (`config.yaml` o `hermes mcp add`):
 
 ```yaml
@@ -122,6 +132,12 @@ mcp:
       headers:
         Authorization: "Bearer TU_API_KEY"
 ```
+
+Si prefieres OAuth en lugar de API key, configura el cliente MCP con la metadata de arriba y
+Hermes/Claude/Codex harán el login OAuth contra PocketID automáticamente.
+
+Cuando el MCP se autentica vía OAuth, el campo `agent` de los chats publicados refleja la
+identidad del usuario (email/sub de PocketID) en lugar de un nombre genérico.
 
 ## 🔐 Panel de administración
 

@@ -30,17 +30,63 @@ ${cfg.oidcIssuer ? `<p><a href="/admin">Panel de administración</a></p>` : ""}
   app.route("/", publicRoutes(cfg));
   app.route("/", adminRoutes(cfg, oidc));
 
-  // MCP endpoint (stateless streamable HTTP), protegido por API key.
+  // Metadata de OAuth Protected Resource (RFC 9728): anuncia a PocketID como AS.
+  // Es el endpoint de descubrimiento estándar para clientes MCP (Hermes/Claude/Codex).
+  app.get("/.well-known/oauth-protected-resource/mcp", (c) => {
+    const mcpUrl = `${cfg.baseUrl}/mcp`;
+    const meta: Record<string, unknown> = {
+      resource: mcpUrl,
+      scopes_supported: [],
+      authorization_servers: cfg.oidcIssuer ? [cfg.oidcIssuer] : [],
+    };
+    return c.json(meta);
+  });
+
+  // MCP endpoint (stateless streamable HTTP).
+  // Auth: acepta API key (AGENT_API_KEY) O access token de PocketID (OAuth).
   app.all("/mcp", async (c) => {
     const auth = c.req.header("Authorization") ?? "";
     const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-    if (!cfg.agentApiKeys.includes(token)) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
+
+    // 1) API key
+    if (cfg.agentApiKeys.includes(token)) {
+      return handleMcpRequest(c.req.raw);
     }
-    return handleMcpRequest(c.req.raw);
+
+    // 2) Access token OAuth emitido por PocketID (solo si OIDC está habilitado)
+    if (token && cfg.oidcIssuer) {
+      const payload = await oidc.verifyAccessToken(token);
+      if (payload) {
+        const authInfo = {
+          token,
+          clientId: String(payload.client_id ?? payload.sub ?? "oauth"),
+          scopes: Array.isArray(payload.scope)
+            ? payload.scope
+            : typeof payload.scope === "string"
+              ? payload.scope.split(" ")
+              : [],
+          expiresAt: typeof payload.exp === "number" ? payload.exp : undefined,
+          extra: {
+            sub: payload.sub,
+            email: payload.email,
+            name: payload.name,
+            provider: "pocketid",
+          },
+        };
+        return handleMcpRequest(c.req.raw, authInfo);
+      }
+    }
+
+    return new Response(
+      JSON.stringify({ error: "Unauthorized: se requiere una API key o un access token válido" }),
+      {
+        status: 401,
+        headers: {
+          "Content-Type": "application/json",
+          "WWW-Authenticate": `Bearer resource_metadata="${cfg.baseUrl}/.well-known/oauth-protected-resource/mcp"`,
+        },
+      }
+    );
   });
 
   if (cfg.oidcIssuer) {
