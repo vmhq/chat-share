@@ -1,172 +1,167 @@
 # chat-share
 
-Comparte conversaciones de agentes de IA mediante enlaces públicos únicos. Self-hosted, con
-API REST + servidor MCP para agentes, y panel de administración protegido por login OIDC
-(vía PocketID).
+Share AI agent conversations via unique public links. Self-hosted, with a REST API + MCP
+server for agents, and an admin panel protected by OIDC login (via PocketID).
 
-Es como la función "Compartir" de ChatGPT, pero autoalojada y pensada para que los propios
-agentes de IA (Hermes, Claude, Codex, etc.) publiquen y gestionen los enlaces.
+It's like ChatGPT's "Share" feature, but self-hosted and designed so AI agents themselves
+(Hermes, Claude, Codex, etc.) publish and manage the links.
 
-## ✨ Características
+## ✨ Features
 
-- **API REST + MCP** para que agentes de IA publiquen conversaciones y reciban un enlace `/s/<id>`.
-- **Enlace público** renderizado en HTML bonito (markdown, sintaxis, roles distinguidos).
-- **Contraseña opcional** (hasheada con argon2) para proteger el enlace.
-- **Expiración opcional** (`1h`, `24h`, `7d`, `30d`, o nunca).
-- **Panel de administración** con login **OIDC (PocketID)**: ver todos los chats, vistas,
-  expiración, revocar/eliminar enlaces.
-- Contador de vistas y estado (activo / expirado / revocado).
-- SQLite (WAL), sin dependencias externas. Contenedor Docker pequeño y multi-arquitectura.
+- **REST API + MCP** for AI agents to publish conversations and get a `/s/<id>` link.
+- **Public link** rendered as nice HTML (markdown, syntax highlighting, role-styled bubbles).
+- **Optional password** (argon2-hashed) to protect the link.
+- **Optional expiration** (`1h`, `24h`, `7d`, `30d`, or never).
+- **Admin panel** with **OIDC (PocketID)** login: view all chats, view counts, expiration,
+  revoke/delete links.
+- View counter and status (active / expired / revoked).
+- SQLite (WAL), no external dependencies. Small multi-arch Docker image.
 
-## 🚀 Quickstart con Docker
+## 🚀 Docker quickstart
 
 ```bash
 docker run -d --name chat-share \
   -p 3000:3000 \
   -v chat-share-data:/app/data \
-  -e BASE_URL="https://share.tudominio.cl" \
+  -e BASE_URL="https://share.yourdomain.cl" \
   -e SESSION_SECRET="$(openssl rand -hex 32)" \
-  -e AGENT_API_KEY="una-key-secreta" \
-  -e OIDC_ISSUER="https://id.tudominio.cl" \
+  -e AGENT_API_KEY="a-secret-key" \
+  -e OIDC_ISSUER="https://id.yourdomain.cl" \
   -e OIDC_CLIENT_ID="chat-share" \
-  -e ADMIN_ALLOWED_SUBS="<sub-del-usuario>" \
-  ghcr.io/<tu-usuario>/chat-share:latest
+  -e ADMIN_ALLOWED_SUBS="<user-sub>" \
+  ghcr.io/<your-user>/chat-share:latest
 ```
 
-O con `docker-compose.yml`:
+Or with `docker-compose.yml` (see `docker-compose.yml` in the repo root):
 
 ```yaml
 services:
   chat-share:
-    image: ghcr.io/<tu-usuario>/chat-share:latest
+    image: ghcr.io/<your-user>/chat-share:latest
     restart: unless-stopped
     ports: ["3000:3000"]
     volumes: ["chat-share-data:/app/data"]
-    environment:
-      BASE_URL: "https://share.tudominio.cl"
-      SESSION_SECRET: "cambia-este-secreto"
-      AGENT_API_KEY: "una-key-secreta"
-      OIDC_ISSUER: "https://id.tudominio.cl"
-      OIDC_CLIENT_ID: "chat-share"
-      ADMIN_ALLOWED_SUBS: "<sub-del-usuario>"
+    env_file: .env
 volumes:
   chat-share-data:
 ```
 
-## ⚙️ Variables de entorno
+Copy `.env.example` to `.env`, fill it in, and run `docker compose up -d`.
 
-| Variable | Requerida | Default | Descripción |
+## ⚙️ Environment variables
+
+| Variable | Required | Default | Description |
 |---|---|---|---|
-| `PORT` | no | `3000` | Puerto HTTP |
-| `BASE_URL` | sí (prod) | `http://localhost:3000` | URL pública base para generar enlaces |
-| `DB_PATH` | no | `./data/chat-share.db` | Ruta SQLite (montar volumen) |
-| `AGENT_API_KEY` | sí | — | Keys de agentes (separadas por coma) |
-| `SESSION_SECRET` | sí | — | Secreto HMAC de cookies (≥32 chars aleatorios) |
-| `OIDC_ISSUER` | sí* | — | Issuer de PocketID (p. ej. `https://id.tudominio.cl`) |
-| `OIDC_CLIENT_ID` | sí* | — | Client ID del panel admin |
-| `OIDC_CLIENT_SECRET` | no | — | Client secret (si el cliente es confidencial) |
-| `OIDC_AUDIENCE` | no | — | Audiencia exigida al validar access tokens OAuth del MCP |
-| `ADMIN_ALLOWED_SUBS` | no | — | Subs OIDC permitidos en el admin (separados por coma) |
-| `COOKIE_SECURE` | no | `true` | Flag `Secure` en cookies (poner `false` solo en HTTP local) |
-| `BODY_LIMIT` | no | `1048576` | Límite de cuerpo en bytes para API/MCP/unlock |
+| `PORT` | no | `3000` | HTTP port |
+| `BASE_URL` | yes (prod) | `http://localhost:3000` | Public base URL used to generate links |
+| `DB_PATH` | no | `./data/chat-share.db` | SQLite path (mount a volume) |
+| `AGENT_API_KEY` | yes | — | Agent keys (comma-separated) |
+| `SESSION_SECRET` | yes | — | HMAC secret for cookies (≥32 random chars) |
+| `OIDC_ISSUER` | yes* | — | PocketID issuer (e.g. `https://id.yourdomain.cl`) |
+| `OIDC_CLIENT_ID` | yes* | — | Admin panel client ID |
+| `OIDC_CLIENT_SECRET` | no | — | Client secret (if the client is confidential) |
+| `OIDC_AUDIENCE` | no | — | Audience required when validating MCP OAuth access tokens |
+| `ADMIN_ALLOWED_SUBS` | no | — | OIDC subs allowed in the admin panel (comma-separated) |
+| `COOKIE_SECURE` | no | `true` | `Secure` flag on cookies (set `false` only on local HTTP) |
+| `BODY_LIMIT` | no | `1048576` | Request body limit in bytes for API/MCP/unlock |
 
-\* OIDC es opcional: sin `OIDC_ISSUER`/`OIDC_CLIENT_ID` el panel admin queda deshabilitado,
-pero la API y los enlaces públicos funcionan.
+\* OIDC is optional: without `OIDC_ISSUER`/`OIDC_CLIENT_ID` the admin panel is disabled,
+but the API and public links keep working.
 
-## 🤖 Publicar desde un agente de IA
+## 🤖 Publishing from an AI agent
 
-### Vía API REST (curl)
+### Via REST API (curl)
 
 ```bash
-curl -X POST https://share.tudominio.cl/api/chats \
-  -H "Authorization: Bearer TU_API_KEY" \
+curl -X POST https://share.yourdomain.cl/api/chats \
+  -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "title": "Solución al problema de red",
+    "title": "Network issue fix",
     "agent": "hermes-agent",
     "messages": [
-      {"role": "user", "content": "¿Cómo configuro el DNS?"},
-      {"role": "assistant", "content": "Edita `/etc/resolv.conf`..."}
+      {"role": "user", "content": "How do I configure DNS?"},
+      {"role": "assistant", "content": "Edit `/etc/resolv.conf`..."}
     ],
-    "password": "opcional-123",
+    "password": "optional-123",
     "expires_in": "7d"
   }'
 ```
 
-Respuesta:
+Response:
 
 ```json
 {
   "id": "mWqq9mPEdrRZ",
-  "url": "https://share.tudominio.cl/s/mWqq9mPEdrRZ",
+  "url": "https://share.yourdomain.cl/s/mWqq9mPEdrRZ",
   "expires_at": "2026-08-09T19:39:52.728Z",
   "password_protected": true
 }
 ```
 
-### Vía MCP
+### Via MCP
 
-El endpoint `/mcp` es un servidor **MCP Streamable HTTP** (stateless). Tools:
+The `/mcp` endpoint is an **MCP Streamable HTTP** server (stateless). Tools:
 
-| Tool | Descripción |
+| Tool | Description |
 |---|---|
-| `share_conversation` | Publica una conversación → devuelve URL. Pregunta al usuario si quiere contraseña/expiración si no las indicó. |
-| `revoke_shared_chat` | Revoca un enlace (`id`). |
-| `get_shared_chat_info` | Metadatos de un enlace (`vistas`, `expires_at`, estado). |
+| `share_conversation` | Publishes a conversation → returns a URL. Asks the user about password/expiration if they didn't specify any. |
+| `revoke_shared_chat` | Revokes a link (`id`). |
+| `get_shared_chat_info` | Link metadata (`views`, `expires_at`, status). |
 
-**Autenticación del MCP** — se aceptan dos mecanismos:
+**MCP authentication** — two mechanisms are supported:
 
-1. **API key** (igual que la API REST): header `Authorization: Bearer <AGENT_API_KEY>`.
-2. **OAuth 2.0 contra PocketID**: el servidor es un *resource server* que delega la autorización
-   en PocketID. El flujo de descubrimiento estándar:
-   - Metadata: `https://share.tudominio.cl/.well-known/oauth-protected-resource/mcp`
-   - El cliente hace login OAuth en PocketID y recibe un *access token* que envía como
+1. **API key** (same as the REST API): header `Authorization: Bearer <AGENT_API_KEY>`.
+2. **OAuth 2.0 against PocketID**: the server acts as a *resource server* that delegates
+   authorization to PocketID. Standard discovery flow:
+   - Metadata: `https://share.yourdomain.cl/.well-known/oauth-protected-resource/mcp`
+   - The client does an OAuth login at PocketID and receives an *access token* sent as
      `Authorization: Bearer <access_token>`.
-   - El servidor valida el token contra las **JWKS** de PocketID (config `OIDC_ISSUER`).
+   - The server validates the token against PocketID's **JWKS** (`OIDC_ISSUER` config).
 
-**Configurar en Hermes** (`config.yaml` o `hermes mcp add`):
+**Configure in Hermes** (`config.yaml` or `hermes mcp add`):
 
 ```yaml
 mcp:
   servers:
     chat-share:
       transport: streamable-http
-      url: https://share.tudominio.cl/mcp
+      url: https://share.yourdomain.cl/mcp
       headers:
-        Authorization: "Bearer TU_API_KEY"
+        Authorization: "Bearer YOUR_API_KEY"
 ```
 
-Si prefieres OAuth en lugar de API key, configura el cliente MCP con la metadata de arriba y
-Hermes/Claude/Codex harán el login OAuth contra PocketID automáticamente.
+If you prefer OAuth over an API key, point the MCP client at the metadata URL above and
+Hermes/Claude/Codex will perform the OAuth login against PocketID automatically.
 
-Cuando el MCP se autentica vía OAuth, el campo `agent` de los chats publicados refleja la
-identidad del usuario (email/sub de PocketID) en lugar de un nombre genérico.
+When the MCP authenticates via OAuth, the `agent` field of published chats reflects the
+user's identity (PocketID email/sub) instead of a generic name.
 
-## 🔐 Panel de administración
+## 🔐 Admin panel
 
-1. Crea un cliente OIDC en **PocketID** con redirect URI `https://share.tudominio.cl/admin/callback`.
-2. Configura `OIDC_ISSUER` y `OIDC_CLIENT_ID` (y `OIDC_CLIENT_SECRET` si aplica).
-3. Accede a `/admin`. Verás todos los chats compartidos: título, agente, fecha, expiración,
-   vistas, si está protegido con contraseña, estado y acciones (copiar URL / revocar).
+1. Create an OIDC client in **PocketID** with redirect URI `https://share.yourdomain.cl/admin/callback`.
+2. Configure `OIDC_ISSUER` and `OIDC_CLIENT_ID` (plus `OIDC_CLIENT_SECRET` if applicable).
+3. Go to `/admin`. You'll see all shared chats: title, agent, date, expiration, views,
+   password protection, status, and actions (copy URL / revoke).
 
-El flujo usa Authorization Code + PKCE, valida el `id_token` contra las JWKS del issuer y crea
-una sesión stateless firmada (HMAC).
+The flow uses Authorization Code + PKCE, validates the `id_token` against the issuer's JWKS
+and creates a signed stateless session (HMAC).
 
-## 🐳 Imagen Docker / CI
+## 🐳 Docker image / CI
 
-- **Dockerfile** multi-etapa → imagen runtime pequeña (`oven/bun:1-alpine`).
-- **GitHub Actions** (`.github/workflows/docker.yml`): en cada push a `main` o tag `v*` compila
-  para `linux/amd64` y `linux/arm64` y publica en **GHCR** (`ghcr.io/<repo>/chat-share`).
+- **Multi-stage Dockerfile** → small runtime image (`oven/bun:1-alpine`).
+- **GitHub Actions** (`.github/workflows/docker.yml`): on every push to `main` or tag `v*`
+  it builds for `linux/amd64` and `linux/arm64` and publishes to **GHCR** (`ghcr.io/<repo>/chat-share`).
 
-## 🧪 Desarrollo
+## 🧪 Development
 
 ```bash
 bun install
-bun run src/index.ts   # requiere SESSION_SECRET y AGENT_API_KEY
+bun run src/index.ts   # requires SESSION_SECRET and AGENT_API_KEY
 bunx tsc --noEmit      # typecheck
 bun test               # tests
 ```
 
-## 📄 Licencia
+## 📄 License
 
 MIT

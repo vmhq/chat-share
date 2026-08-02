@@ -1,0 +1,29 @@
+services:
+  chat-share:
+    image: ghcr.io/vmhq/chat-share:main
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - chat-share-data:/app/data
+    environment:
+      # URL pública base (dominio real del despliegue)
+      BASE_URL: "https://share.vmhq.cl"
+      # Secreto HMAC de cookies — genera uno con: openssl rand -hex 32
+      SESSION_SECRET: "${SESSION_SECRET}"
+      # Keys de agentes (separadas por coma). Compártela solo con tus agentes.
+      AGENT_API_KEY: "${AGENT_API_KEY}"
+      # PocketID / OIDC (opcional: sin esto el panel admin queda deshabilitado)
+      OIDC_ISSUER: "${OIDC_ISSUER:-}"
+      OIDC_CLIENT_ID: "${OIDC_CLIENT_ID:-}"
+      OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET:-}"
+      OIDC_AUDIENCE: "${OIDC_AUDIENCE:-}"
+      # Restringir el panel admin a ciertos subs (separados por coma)
+      ADMIN_ALLOWED_SUBS: "${ADMIN_ALLOWED_SUBS:-}"
+      # Cookies con flag Secure (true en producción con TLS)
+      COOKIE_SECURE: "${COOKIE_SECURE:-true}"
+      # Límite de cuerpo en bytes
+      BODY_LIMIT: "${BODY_LIMIT:-1048576}"
+
+volumes:
+  chat-share-data:
