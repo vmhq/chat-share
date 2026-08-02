@@ -49,39 +49,23 @@ ver la conversación renderizada en HTML bonito (markdown, roles, etc.).
 
 ## 3. Estado actual del trabajo
 
-### Hecho ✅ (v0.1.0 funcional)
-1. Repo creado en `/root/git/chat-share`, `git init`, `bun init`, deps instaladas.
-2. `src/db.ts` — esquema SQLite (`shared_chats`) + `rowToPublic`.
-3. `src/util.ts` — `newId`, `baseUrl`, `parseExpiry`, `EXPIRY_PRESETS` (errores de tipos corregidos).
-4. `src/config.ts` — `loadConfig` con validación de env (exige `SESSION_SECRET`, `AGENT_API_KEY`).
-5. `src/service.ts` — lógica de negocio compartida (crear/obtener/listar/revocar, argon2, disponibilidad).
-6. `src/routes/api.ts` — REST: `POST/GET/DELETE /api/chats` + `GET /api/health` (health sin auth).
-7. `src/mcp.ts` — servidor MCP Streamable HTTP stateless, 3 tools (`share_conversation`,
-   `revoke_shared_chat`, `get_shared_chat_info`). Nota: SDK 1.30 cambió la firma de
-   `registerTool` a `registerTool(name, {description, inputSchema}, cb)` — el código ya está adaptado.
-8. `src/views/chatPage.ts` — HTML de conversación (markdown sanitizado con marked+dompurify),
-   formulario de contraseña, página de expirado/revocado.
-9. `src/routes/public.ts` — vista `/s/:id`, unlock con cookie HMAC + rate-limit en memoria,
-   contador de vistas, headers noindex/no-store.
-10. `src/oidc.ts` — cliente OIDC (discovery, PKCE, intercambio de code, validación id_token con
-    `jose`), sesión stateless firmada (HMAC con `timingSafeEqual`).
-11. `src/routes/admin.ts` — login OIDC (PKCE, state/nonce en cookies), callback, middleware de
-    sesión, tabla admin con revocar/copiar, logout.
-12. `src/index.ts` — monta todo + arranca `@hono/node-server`.
-13. `Dockerfile` (multi-etapa, `oven/bun:1-alpine`), `.dockerignore`, `.gitignore` (data),
-    `.github/workflows/docker.yml` (GHCR multi-arch), `README.md` completo.
-14. Tests (`test/app.test.ts`) — **5 pasan, 0 fallan**: health, auth, crear/consultar, vista
-    pública con markdown, revocar.
-15. **Probado en vivo** (servidor corriendo): health, crear con password+expiry 24h, unlock con
-    cookie correcta, revocar→404, expirado→410, markdown renderiza, contador de vistas,
-    panel admin sin OIDC→503, MCP `tools/list` y `tools/call` OK. Typecheck (`tsc --noEmit`) limpio.
+### Hecho ✅ (v0.1.0 funcional, publicado en GitHub + GHCR)
+1–15. (lista completa arriba, ver §3 anterior — la app está construida, testeada y validada en vivo).
+16. **Repo público creado en GitHub**: `https://github.com/vmhq/chat-share` (rama `main`).
+17. **GitHub Actions `docker-build` probado y pasando** (2 runs success). Publica en GHCR
+    `ghcr.io/vmhq/chat-share` con tags `main` y `sha-<commit>`, multi-arch (amd64+arm64).
+    **Verificado público y descargable**: token anónimo de GHCR devuelve manifest HTTP 200.
+    Nota: el `GITHUB_TOKEN` por defecto no puede cambiar la visibilidad de packages de usuario
+    (requiere PAT con scope `packages:write`); no fue necesario porque el paquete ya es público.
 
 ### Pendiente ❌ (para el agente que continúa)
-- **Commit inicial + crear repo GitHub con `gh` y push** (verificar `gh auth status`).
-- Verificar que el workflow GHCR corre y publica.
+- **Despliegue final en Dokploy** (fuera del repo): imagen `ghcr.io/vmhq/chat-share:main`,
+  volumen `/app/data`, env vars (§4.6), dominio p.ej. `share.vmhq.cl` con TLS del reverse proxy.
+- **Crear cliente OIDC en PocketID**: redirect URI `https://share.<dominio>/admin/callback`.
+- Configurar MCP en Hermes (`https://share.<dominio>/mcp` con header `Authorization: Bearer <key>`)
+  y/o instalar skill de ejemplo.
 - Si `argon2` falla al construir en `oven/bun:1-alpine` (binario nativo), cambiar runtime a
   `oven/bun:1` (Debian slim) o fallback a scrypt de `node:crypto`.
-- Despliegue final en Dokploy (fuera del repo).
 
 ### Nota de entorno
 - Bun está en `~/.bun/bin` pero **NO está en el PATH por defecto**. Anteponer siempre:
