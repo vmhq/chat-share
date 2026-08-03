@@ -1,5 +1,6 @@
 import type { SharedChatRow } from "../db";
 import { availability, parseMessages } from "../service";
+import { FAVICON, FONT_LINKS, THEME_CSS, THEME_SCRIPT, themeToggleHtml } from "./theme";
 
 export interface AdminViewRow {
   row: SharedChatRow;
@@ -69,49 +70,84 @@ export function adminPageHtml(rows: AdminViewRow[], userEmail: string | undefine
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chat Share - Panel de administración</title>
 <meta name="robots" content="noindex">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cg%20clip-path%3D%22url%28%23clip0_378_9639%29%22%3E%3Cpath%20d%3D%22M12%2024C18.6274%2024%2024%2018.6274%2024%2012C24%205.37258%2018.6274%200%2012%200C5.37258%200%200%205.37258%200%2012C0%2018.6274%205.37258%2024%2012%2024Z%22%20fill%3D%22%232781F6%22%2F%3E%3Cpath%20d%3D%22M17.1256%2017.1258H11.5622C8.4955%2017.1258%205.99976%2014.6299%205.99976%2011.5624C8.4955%206%2011.5623%206C14.6298%206%2017.1256%208.49591%2017.1256%2011.5624V17.1258Z%22%20fill%3D%22white%22%20stroke%3D%22white%22%20stroke-width%3D%220.28125%22%2F%3E%3C%2Fg%3E%3Cdefs%3E%3CclipPath%20id%3D%22clip0_378_9639%22%3E%3Crect%20width%3D%2224%22%20height%3D%2224%22%20fill%3D%22white%22%2F%3E%3C%2FclipPath%3E%3C%2Fdefs%3E%3C%2Fsvg%3E">
+<link rel="icon" type="image/svg+xml" href="${FAVICON}">
+${FONT_LINKS}
 <style>
-  :root { color-scheme: dark; }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: #0f1115; color: #e6e6e6; font-family: system-ui, sans-serif; }
-  header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; background: #16181f; border-bottom: 1px solid #23262e; }
-  header h1 { font-size: 1.15rem; margin: 0; }
-  header .user { color: #8b93a1; font-size: .9rem; }
-  header a.logout { color: #ff7a7a; text-decoration: none; margin-left: 14px; font-size: .85rem; }
-  main { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
-  table { width: 100%; border-collapse: collapse; background: #171a21; border-radius: 12px; overflow: hidden; }
-  th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid #23262e; vertical-align: top; }
-  th { background: #1b1e26; font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: #8b93a1; }
+${THEME_CSS}
+  header { position: sticky; top: 0; z-index: 10; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(12px); }
+  .header-inner { max-width: 1100px; margin: 0 auto; padding: 16px 20px; display: flex; align-items: center; gap: 16px; }
+  .brand { flex: 0 0 auto; display: flex; flex-direction: column; gap: 3px; padding-right: 18px; border-right: 1px solid var(--border); }
+  .brandmark { font-family: var(--font-serif); font-size: .8rem; font-weight: 600; letter-spacing: .32em; text-transform: uppercase; color: var(--accent); line-height: 1; }
+  .brandsub { font-family: var(--font-ui); font-size: .6rem; letter-spacing: .24em; text-transform: uppercase; color: var(--faint); line-height: 1; }
+  .titles { min-width: 0; flex: 1; }
+  .titles h1 { margin: 0; font-family: var(--font-serif); font-size: 1.15rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .titles .sub { color: var(--muted); font-size: .76rem; margin-top: 2px; }
+  .right { flex: 0 0 auto; display: flex; align-items: center; gap: 16px; }
+  .user { color: var(--muted); font-size: .86rem; }
+  a.logout { color: var(--accent); text-decoration: none; font-size: .85rem; padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px; }
+  a.logout:hover { border-color: var(--accent); }
+  main { max-width: 1100px; margin: 28px auto 60px; padding: 0 20px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 13px 16px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); background: var(--surface-2); }
   tr:last-child td { border-bottom: 0; }
-  .dim { color: #5b6270; font-size: .8rem; }
-  .badge { padding: 2px 8px; border-radius: 20px; font-size: .75rem; white-space: nowrap; }
-  .badge.active { background: #14351f; color: #7ee0a3; }
-  .badge.expired { background: #33250f; color: #f0b26b; }
-  .badge.revoked { background: #331717; color: #ff7a7a; }
+  tbody tr:hover { background: var(--surface-2); }
+  td a { color: var(--fg); text-decoration: none; }
+  td a:hover { color: var(--accent); }
+  .dim { color: var(--faint); font-size: .8rem; }
+  .badge { padding: 2px 10px; border-radius: 20px; font-size: .72rem; white-space: nowrap; font-weight: 500; }
+  .badge.active { background: color-mix(in srgb, #16a34a 16%, transparent); color: var(--badge-active, #16a34a); }
+  .badge.expired { background: color-mix(in srgb, #ca8a04 16%, transparent); color: var(--badge-expired, #ca8a04); }
+  .badge.revoked { background: color-mix(in srgb, #dc2626 16%, transparent); color: var(--badge-revoked, #dc2626); }
   .actions { white-space: nowrap; }
   .actions form.inline { display: inline; }
-  button { padding: 6px 12px; border: 0; border-radius: 6px; cursor: pointer; font-size: .8rem; }
-  button.copy { background: #23262e; color: #e6e6e6; }
-  button.danger { background: #4a1f1f; color: #ff9b9b; margin-left: 6px; }
-  .empty { text-align: center; color: #5b6270; padding: 40px; }
-  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1d4a2a; color: #e6e6e6; padding: 10px 20px; border-radius: 8px; opacity: 0; transition: opacity .3s; }
+  button { padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: .78rem; font-family: var(--font-ui); background: var(--surface); color: var(--fg); }
+  button:hover { border-color: var(--accent); }
+  button.danger { border-color: color-mix(in srgb, #dc2626 40%, transparent); color: #dc2626; margin-left: 6px; }
+  button.danger:hover { background: color-mix(in srgb, #dc2626 12%, transparent); }
+  .empty { text-align: center; color: var(--faint); padding: 44px; }
+  footer { text-align: center; padding: 26px 24px 40px; }
+  footer .brandmark { font-size: .6rem; letter-spacing: .32em; }
+  footer .rule { width: 44px; height: 2px; background: var(--accent); margin: 12px auto 14px; border-radius: 2px; }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--surface-2); color: var(--fg); border: 1px solid var(--border); padding: 10px 20px; border-radius: 8px; opacity: 0; transition: opacity .3s; box-shadow: var(--shadow); }
   .toast.show { opacity: 1; }
   @media (max-width: 800px) { table { font-size: .85rem; } th:nth-child(2), td:nth-child(2) { display: none; } }
 </style>
+<script>${THEME_SCRIPT}</script>
 </head>
-<body>
+<body data-theme-init>
 <header>
-  <h1>🖥️ Panel de administración</h1>
-  <div class="user">${userEmail ? esc(userEmail) : ""} <a class="logout" href="/admin/logout">Cerrar sesión</a></div>
+  <div class="header-inner">
+    <div class="brand">
+      <span class="brandmark">Chat&nbsp;Share</span>
+      <span class="brandsub">VMHQ</span>
+    </div>
+    <div class="titles">
+      <h1>Panel de administración</h1>
+      <div class="sub">Conversaciones compartidas</div>
+    </div>
+    <div class="right">
+      <span class="user">${userEmail ? esc(userEmail) : ""}</span>
+      ${themeToggleHtml()}
+      <a class="logout" href="/admin/logout">Cerrar sesión</a>
+    </div>
+  </div>
 </header>
 <main>
-  <table>
-    <thead><tr>
-      <th>Título / ID</th><th>Agente</th><th>Creado</th><th>Expira</th><th>Vistas</th><th>🔒</th><th>Estado</th><th>Acciones</th>
-    </tr></thead>
-    <tbody>${body}</tbody>
-  </table>
+  <div class="card">
+    <table>
+      <thead><tr>
+        <th>Título / ID</th><th>Agente</th><th>Creado</th><th>Expira</th><th>Vistas</th><th>🔒</th><th>Estado</th><th>Acciones</th>
+      </tr></thead>
+      <tbody>${body}</tbody>
+    </table>
+  </div>
 </main>
+<footer>
+  <div class="brandmark">Chat&nbsp;Share</div>
+  <div class="rule"></div>
+</footer>
 <div id="toast" class="toast"></div>
 <script>
   document.querySelectorAll('button.copy').forEach(function(b){

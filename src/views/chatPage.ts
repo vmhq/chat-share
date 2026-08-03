@@ -2,6 +2,7 @@ import { marked } from "marked";
 import createDOMPurify from "dompurify";
 import { JSDOM } from "jsdom";
 import type { Message } from "../service";
+import { faviconLink, FONT_LINKS, THEME_CSS, THEME_SCRIPT, themeToggleHtml } from "./theme";
 
 const window = new JSDOM("").window;
 const DOMPurify = createDOMPurify(window);
@@ -53,13 +54,6 @@ export interface ChatPageData {
 }
 
 const TZ = "America/Santiago";
-
-const FAVICON =
-  "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cg%20clip-path%3D%22url%28%23clip0_378_9639%29%22%3E%3Cpath%20d%3D%22M12%2024C18.6274%2024%2024%2018.6274%2024%2012C24%205.37258%2018.6274%200%2012%200C5.37258%200%200%205.37258%200%2012C0%2018.6274%205.37258%2024%2012%2024Z%22%20fill%3D%22%232781F6%22%2F%3E%3Cpath%20d%3D%22M17.1256%2017.1258H11.5622C8.4955%2017.1258%205.99976%2014.6299%205.99976%2011.5624C8.4955%206%2011.5623%206C14.6298%206%2017.1256%208.49591%2017.1256%2011.5624V17.1258Z%22%20fill%3D%22white%22%20stroke%3D%22white%22%20stroke-width%3D%220.28125%22%2F%3E%3C%2Fg%3E%3Cdefs%3E%3CclipPath%20id%3D%22clip0_378_9639%22%3E%3Crect%20width%3D%2224%22%20height%3D%2224%22%20fill%3D%22white%22%2F%3E%3C%2FclipPath%3E%3C%2Fdefs%3E%3C%2Fsvg%3E";
-
-function faviconLink(): string {
-  return `<link rel="icon" type="image/svg+xml" href="${FAVICON}">`;
-}
 
 function esc(s: string): string {
   return s.replace(/[&<>"']/g, (ch) => ({
@@ -149,78 +143,30 @@ ${faviconLink()}
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  /* ---------- Tema editorial (Marginalia) ---------- */
-  :root {
-    color-scheme: light dark;
-    --font-ui: "Inter", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-    --font-serif: "Lora", Georgia, "Times New Roman", serif;
-    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  }
-  html[data-theme="light"] {
-    color-scheme: light;
-    --bg: #faf9f6;
-    --fg: #211f1b;
-    --muted: #6f6a5e;
-    --faint: #9a948a;
-    --surface: #ffffff;
-    --surface-2: #f2f0ea;
-    --border: #e6e2d9;
-    --border-strong: #d4cfc3;
-    --accent: #c2410c;
-    --accent-soft: rgba(194, 65, 12, .08);
-    --user-bubble: #efe6d8;
-    --user-border: #e0d2bc;
-    --code-bg: #f4f2ec;
-    --code-border: #e2ddd2;
-    --shadow: 0 1px 2px rgba(33,31,27,.05), 0 6px 20px rgba(33,31,27,.06);
-  }
-  html[data-theme="dark"] {
-    color-scheme: dark;
-    --bg: #14130f;
-    --fg: #e8e5df;
-    --muted: #a29c8e;
-    --faint: #6f6a5e;
-    --surface: #1c1a16;
-    --surface-2: #24211c;
-    --border: #2c2923;
-    --border-strong: #3a362e;
-    --accent: #f97316;
-    --accent-soft: rgba(249,115,22,.12);
-    --user-bubble: #2b2518;
-    --user-border: #463a24;
-    --code-bg: #100f0c;
-    --code-border: #2a2720;
-    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
-  }
-  * { box-sizing: border-box; }
-  html, body { height: 100%; }
-  body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-ui); line-height: 1.65; transition: background .25s ease, color .25s ease; }
-  a { color: var(--accent); }
-
-  header { position: sticky; top: 0; z-index: 10; padding: 14px 24px; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter: blur(10px); }
-  .header-inner { max-width: 820px; margin: 0 auto; display: flex; align-items: center; gap: 14px; }
-  .brandmark { flex: 0 0 auto; font-family: var(--font-serif); font-size: .72rem; font-weight: 600; letter-spacing: .42em; text-transform: uppercase; color: var(--accent); transform: translateX(.42em); }
+${THEME_CSS}
+  /* ---------- Header (chat) ---------- */
+  header { position: sticky; top: 0; z-index: 10; padding: 0; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(12px); }
+  .header-inner { max-width: 820px; margin: 0 auto; padding: 16px 20px; display: flex; align-items: center; gap: 16px; }
+  .brand { flex: 0 0 auto; display: flex; flex-direction: column; gap: 3px; padding-right: 18px; border-right: 1px solid var(--border); }
+  .brandmark { font-family: var(--font-serif); font-size: .8rem; font-weight: 600; letter-spacing: .32em; text-transform: uppercase; color: var(--accent); line-height: 1; }
+  .brandsub { font-family: var(--font-ui); font-size: .6rem; letter-spacing: .24em; text-transform: uppercase; color: var(--faint); line-height: 1; }
   .titles { min-width: 0; flex: 1; }
-  .titles h1 { margin: 0; font-family: var(--font-serif); font-size: 1.2rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .meta { color: var(--muted); font-size: .8rem; margin-top: 2px; }
-  .meta span { margin-right: 14px; }
+  .titles h1 { margin: 0; font-family: var(--font-serif); font-size: 1.15rem; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta { color: var(--muted); font-size: .78rem; margin-top: 3px; display: flex; flex-wrap: wrap; gap: 0 14px; }
+  .meta span { display: inline-flex; align-items: center; gap: 4px; }
+  .meta .dot { color: var(--faint); }
 
-  .theme-toggle { flex: 0 0 auto; display: flex; align-items: center; gap: 2px; border: 1px solid var(--border); border-radius: 999px; padding: 3px; background: var(--surface); }
-  .theme-toggle button { border: 0; background: transparent; cursor: pointer; width: 28px; height: 28px; border-radius: 999px; font-size: .95rem; display: flex; align-items: center; justify-content: center; color: var(--faint); transition: background .15s ease; }
-  .theme-toggle button.active { background: var(--surface-2); color: var(--fg); }
-  .theme-toggle button:hover { color: var(--fg); }
-
-  main { max-width: 820px; margin: 0 auto; padding: 28px 16px 48px; display: flex; flex-direction: column; gap: 22px; }
+  main { max-width: 820px; margin: 0 auto; padding: 32px 20px 48px; display: flex; flex-direction: column; gap: 22px; }
   .row { display: flex; gap: 12px; align-items: flex-start; }
   .row.user { justify-content: flex-end; }
-  .avatar { flex: 0 0 auto; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; margin-top: 2px; background: var(--surface-2); border: 1px solid var(--border); }
+  .avatar { flex: 0 0 auto; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .95rem; margin-top: 2px; background: var(--surface-2); border: 1px solid var(--border); }
   .avatar.user { order: 2; }
   .col { display: flex; flex-direction: column; max-width: 82%; }
   .col.right { align-items: flex-end; }
-  .who { font-size: .78rem; font-weight: 600; letter-spacing: .02em; color: var(--muted); margin: 2px 6px 5px; }
-  .who .name { margin-left: 8px; font-weight: 400; font-style: italic; color: var(--faint); }
-  .bubble { border-radius: 4px 14px 14px 14px; padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); font-family: var(--font-serif); font-size: 1.02rem; }
-  .bubble.user { background: var(--user-bubble); border-color: var(--user-border); border-radius: 14px 4px 14px 14px; }
+  .who { font-size: .74rem; font-weight: 600; letter-spacing: .03em; color: var(--muted); margin: 1px 6px 5px; }
+  .who .name { margin-left: 8px; font-weight: 400; font-style: italic; letter-spacing: 0; color: var(--faint); }
+  .bubble { border-radius: 4px 16px 16px 16px; padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); font-family: var(--font-serif); font-size: 1.02rem; }
+  .bubble.user { background: var(--user-bubble); border-color: var(--user-border); border-radius: 16px 4px 16px 16px; }
   .bubble .body > :first-child { margin-top: 0; }
   .bubble .body > :last-child { margin-bottom: 0; }
 
@@ -250,7 +196,11 @@ ${faviconLink()}
   th, td { border: 1px solid var(--border); padding: 6px 10px; }
   ul, ol { padding-left: 22px; }
 
-  footer { text-align: center; font-family: var(--font-serif); font-size: .66rem; letter-spacing: .4em; text-transform: uppercase; color: var(--faint); padding: 28px 24px 36px; transform: translateX(.2em); }
+  footer { text-align: center; padding: 26px 24px 40px; }
+  footer .footer-inner { max-width: 820px; margin: 0 auto; }
+  footer .brandmark { font-size: .62rem; letter-spacing: .34em; }
+  footer .rule { width: 44px; height: 2px; background: var(--accent); margin: 12px auto 14px; border-radius: 2px; }
+  footer .footnote { font-family: var(--font-ui); font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
 
   .locked { max-width: 420px; margin: 60px auto; text-align: center; }
   .locked input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--fg); font-size: 1rem; margin: 10px 0; font-family: var(--font-ui); }
@@ -260,63 +210,44 @@ ${faviconLink()}
 
   @media (max-width: 600px) {
     .col { max-width: 100%; }
-    header { padding: 10px 14px; }
-    main { padding: 20px 12px 40px; }
+    .header-inner { padding: 12px 14px; gap: 12px; }
+    .brand { padding-right: 12px; }
+    .brandmark { letter-spacing: .22em; font-size: .7rem; }
+    main { padding: 24px 14px 40px; }
   }
 </style>
-<script>
-  (function () {
-    // Tema: light | dark | system. Aplica antes del primer paint (evita FOUC).
-    var stored = null;
-    try { stored = localStorage.getItem("cs-theme"); } catch (e) {}
-    if (!stored) stored = "system";
-    function apply(theme) {
-      var resolved = theme === "system"
-        ? (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
-        : theme;
-      document.documentElement.setAttribute("data-theme", resolved);
-    }
-    apply(stored);
-    window.__csSetTheme = function (theme) {
-      try { localStorage.setItem("cs-theme", theme); } catch (e) {}
-      apply(theme);
-      // Marca el botón activo
-      document.querySelectorAll(".theme-toggle button").forEach(function (b) {
-        b.classList.toggle("active", b.dataset.theme === theme);
-      });
-    };
-    // Reacciona a cambios de preferencia del sistema cuando está en modo "system".
-    if (stored === "system" && window.matchMedia) {
-      window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () {
-        apply("system");
-      });
-    }
-  })();
-</script>
+<script>${THEME_SCRIPT}</script>
 </head>
 <body data-theme-init>
 <header>
   <div class="header-inner">
-    <div class="brandmark">Chat&nbsp;Share</div>
+    <div class="brand">
+      <span class="brandmark">Chat&nbsp;Share</span>
+      <span class="brandsub">VMHQ</span>
+    </div>
     <div class="titles">
       <h1>${esc(d.title)}</h1>
       <div class="meta">
         <span>${esc(agentName)}</span>
+        <span class="dot">·</span>
         <span>${esc(d.createdAt)}</span>
+        <span class="dot">·</span>
         <span>${d.views} vistas</span>
       </div>
     </div>
-    <div class="theme-toggle" role="group" aria-label="Tema">
-      <button type="button" data-theme="light" title="Modo claro" onclick="window.__csSetTheme('light')">☀️</button>
-      <button type="button" data-theme="dark" title="Modo oscuro" onclick="window.__csSetTheme('dark')">🌙</button>
-      <button type="button" data-theme="system" title="Seguir sistema" onclick="window.__csSetTheme('system')">💻</button>
-    </div>
+    ${themeToggleHtml()}
   </div>
 </header>
 <main>
   ${messagesHtml}
 </main>
-<footer>Chat&nbsp;Share&nbsp;·&nbsp;VMHQ</footer>
+<footer>
+  <div class="footer-inner">
+    <div class="brandmark">Chat&nbsp;Share</div>
+    <div class="rule"></div>
+    <div class="footnote">VMHQ</div>
+  </div>
+</footer>
 </body>
 </html>`;
 }
@@ -330,20 +261,25 @@ export function passwordFormHtml(id: string, error?: string): string {
 <meta name="robots" content="noindex">
 <title>Conversación protegida</title>
 ${faviconLink()}
+${FONT_LINKS}
 <style>
-  :root { color-scheme: dark; }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: #0f1115; color: #e6e6e6; font-family: system-ui, sans-serif; display: flex; min-height: 100vh; align-items: center; justify-content: center; }
-  .card { width: 100%; max-width: 420px; padding: 32px; text-align: center; }
-  h1 { font-size: 1.1rem; margin: 0 0 6px; }
-  p { color: #8b93a1; font-size: .9rem; margin: 0 0 8px; }
-  input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #2a2e38; background: #16181f; color: #e6e6e6; font-size: 1rem; margin: 12px 0; }
-  button { width: 100%; padding: 12px; border: 0; border-radius: 8px; background: #3b6cff; color: #fff; font-size: 1rem; cursor: pointer; }
-  .error { color: #ff7a7a; font-size: .85rem; }
+${THEME_CSS}
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-ui); display: flex; min-height: 100vh; align-items: center; justify-content: center; }
+  .card { width: 100%; max-width: 400px; padding: 36px 32px; text-align: center; }
+  .brandmark { font-family: var(--font-serif); font-size: .7rem; font-weight: 600; letter-spacing: .3em; text-transform: uppercase; color: var(--accent); }
+  .card h1 { font-family: var(--font-serif); font-size: 1.15rem; margin: 18px 0 6px; }
+  .card p { color: var(--muted); font-size: .9rem; margin: 0 0 8px; }
+  .card input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--fg); font-size: 1rem; margin: 14px 0; font-family: var(--font-ui); }
+  .card button { width: 100%; padding: 12px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font-size: 1rem; cursor: pointer; font-family: var(--font-ui); }
+  .error { color: var(--accent); font-size: .85rem; }
+  .theme-wrap { position: fixed; top: 16px; right: 16px; }
 </style>
+<script>${THEME_SCRIPT}</script>
 </head>
-<body>
+<body data-theme-init>
+<div class="theme-wrap">${themeToggleHtml()}</div>
 <div class="card">
+  <div class="brandmark">Chat&nbsp;Share</div>
   <h1>🔒 Conversación protegida</h1>
   <p>Ingresa la contraseña para ver esta conversación.</p>
   <form method="post" action="/s/${esc(id)}/unlock">
@@ -370,16 +306,20 @@ export function gonePageHtml(reason: "expired" | "revoked"): string {
 <meta name="robots" content="noindex">
 <title>${title}</title>
 ${faviconLink()}
+${FONT_LINKS}
 <style>
-  :root { color-scheme: dark; }
-  body { margin: 0; background: #0f1115; color: #e6e6e6; font-family: system-ui, sans-serif; display: flex; min-height: 100vh; align-items: center; justify-content: center; text-align: center; }
+${THEME_CSS}
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-ui); display: flex; min-height: 100vh; align-items: center; justify-content: center; text-align: center; }
   .card { max-width: 420px; padding: 32px; }
   .big { font-size: 3rem; }
-  h1 { font-size: 1.2rem; }
-  p { color: #8b93a1; }
+  .card h1 { font-family: var(--font-serif); font-size: 1.25rem; }
+  .card p { color: var(--muted); }
+  .theme-wrap { position: fixed; top: 16px; right: 16px; }
 </style>
+<script>${THEME_SCRIPT}</script>
 </head>
-<body>
+<body data-theme-init>
+<div class="theme-wrap">${themeToggleHtml()}</div>
 <div class="card">
   <div class="big">${reason === "expired" ? "⏳" : "🚫"}</div>
   <h1>${title}</h1>
