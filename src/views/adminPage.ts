@@ -33,7 +33,7 @@ const TZ = "America/Santiago";
 const STATUS_BADGE: Record<string, string> = {
   active: "🟢",
   expired: "⏳",
-  revoked: "🚫",
+  suspended: "🚫",
 };
 
 export function adminPageHtml(rows: AdminViewRow[], userEmail: string | undefined, baseUrl: string, csrf: string): string {
@@ -43,6 +43,15 @@ export function adminPageHtml(rows: AdminViewRow[], userEmail: string | undefine
       const url = `${baseUrl}/s/${r.id}`;
       const created = new Date(r.created_at).toLocaleString("es-CL", { timeZone: TZ });
       const expires = r.expires_at ? new Date(r.expires_at).toLocaleString("es-CL", { timeZone: TZ }) : "nunca";
+      const isSuspended = v.status === "suspended";
+      const actions = [];
+      actions.push(`<button class="copy" data-url="${esc(url)}">Copiar</button>`);
+      if (v.status === "active") {
+        actions.push(`<form method="post" action="/admin/chats/${esc(r.id)}/suspend" class="inline"><input type="hidden" name="_csrf" value="${esc(csrf)}"><button class="warn" type="submit">Suspender</button></form>`);
+      } else if (isSuspended) {
+        actions.push(`<form method="post" action="/admin/chats/${esc(r.id)}/activate" class="inline"><input type="hidden" name="_csrf" value="${esc(csrf)}"><button class="copy" type="submit">Reactivar</button></form>`);
+      }
+      actions.push(`<form method="post" action="/admin/chats/${esc(r.id)}/delete" class="inline"><input type="hidden" name="_csrf" value="${esc(csrf)}"><button class="danger" type="submit">Eliminar</button></form>`);
       return `<tr>
         <td><a href="${esc(url)}" target="_blank" rel="noopener">${esc(r.title)}</a><br><span class="dim">${esc(r.id)}</span></td>
         <td>${esc(r.agent)}</td>
@@ -51,10 +60,7 @@ export function adminPageHtml(rows: AdminViewRow[], userEmail: string | undefine
         <td>${r.views}</td>
         <td>${r.password_hash ? "🔒" : "—"}</td>
         <td><span class="badge ${v.status}">${STATUS_BADGE[v.status] ?? "•"} ${v.status}</span></td>
-        <td class="actions">
-          <button class="copy" data-url="${esc(url)}">Copiar</button>
-          ${v.status !== "revoked" ? `<form method="post" action="/admin/chats/${esc(r.id)}/revoke" class="inline"><input type="hidden" name="_csrf" value="${esc(csrf)}"><button class="danger" type="submit">Revocar</button></form>` : ""}
-        </td>
+        <td class="actions">${actions.join(" ")}</td>
       </tr>`;
     })
     .join("");
@@ -99,11 +105,13 @@ ${THEME_CSS}
   .badge { padding: 2px 10px; border-radius: 20px; font-size: .72rem; white-space: nowrap; font-weight: 500; }
   .badge.active { background: color-mix(in srgb, #16a34a 16%, transparent); color: var(--badge-active, #16a34a); }
   .badge.expired { background: color-mix(in srgb, #ca8a04 16%, transparent); color: var(--badge-expired, #ca8a04); }
-  .badge.revoked { background: color-mix(in srgb, #dc2626 16%, transparent); color: var(--badge-revoked, #dc2626); }
+  .badge.suspended { background: color-mix(in srgb, #dc2626 16%, transparent); color: var(--badge-revoked, #dc2626); }
   .actions { white-space: nowrap; }
   .actions form.inline { display: inline; }
   button { padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: .78rem; font-family: var(--font-ui); background: var(--surface); color: var(--fg); }
   button:hover { border-color: var(--accent); }
+  button.warn { border-color: color-mix(in srgb, #ca8a04 40%, transparent); color: #ca8a04; margin-left: 6px; }
+  button.warn:hover { background: color-mix(in srgb, #ca8a04 12%, transparent); }
   button.danger { border-color: color-mix(in srgb, #dc2626 40%, transparent); color: #dc2626; margin-left: 6px; }
   button.danger:hover { background: color-mix(in srgb, #dc2626 12%, transparent); }
   .empty { text-align: center; color: var(--faint); padding: 44px; }

@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import type { AppConfig } from "../config";
 import { OidcClient, issueSession, verifySession, randomToken, type SessionClaims } from "../oidc";
-import { listChats, revokeChat } from "../service";
+import { listChats, suspendChat, activateChat, deleteChat } from "../service";
 import { buildRows, adminPageHtml } from "../views/adminPage";
 import { baseUrl } from "../util";
 
@@ -53,16 +53,46 @@ export function adminRoutes(cfg: AppConfig, oidc: OidcClient) {
     return c.html(adminPageHtml(rows, claims.email ?? claims.sub, baseUrl(), csrfToken(cfg, claims.sub)));
   });
 
-  app.post("/admin/chats/:id/revoke", async (c) => {
-    const claims = c.get("adminUser") as SessionClaims;
-    // CSRF: requiere el token derivado de la sesión en el body del formulario.
+  // Helper: verifica CSRF (deriva el token de la sesión).
+  const requireCsrf = async (
+    c: { req: { parseBody: () => Promise<Record<string, unknown>> }; get: (k: string) => unknown }
+  ): Promise<boolean> => {
     const form = await c.req.parseBody();
     const token = typeof form["_csrf"] === "string" ? form["_csrf"] : undefined;
-    if (!verifyCsrf(cfg, claims.sub, token)) {
+    const claims = c.get("adminUser") as SessionClaims;
+    return verifyCsrf(cfg, claims.sub, token);
+  };
+
+  app.post("/admin/chats/:id/suspend", async (c) => {
+    if (!(await requireCsrf(c))) {
       return c.text("Token CSRF inválido. Recarga la página e intenta de nuevo.", 403);
     }
-    const id = c.req.param("id");
-    revokeChat(id);
+    suspendChat(c.req.param("id"));
+    return c.redirect("/admin");
+  });
+
+  app.post("/admin/chats/:id/activate", async (c) => {
+    if (!(await requireCsrf(c))) {
+      return c.text("Token CSRF inválido. Recarga la página e intenta de nuevo.", 403);
+    }
+    activateChat(c.req.param("id"));
+    return c.redirect("/admin");
+  });
+
+  app.post("/admin/chats/:id/delete", async (c) => {
+    if (!(await requireCsrf(c))) {
+      return c.text("Token CSRF inválido. Recarga la página e intenta de nuevo.", 403);
+    }
+    deleteChat(c.req.param("id"));
+    return c.redirect("/admin");
+  });
+
+  // Alias de compatibilidad: revoke → suspend.
+  app.post("/admin/chats/:id/revoke", async (c) => {
+    if (!(await requireCsrf(c))) {
+      return c.text("Token CSRF inválido. Recarga la página e intenta de nuevo.", 403);
+    }
+    suspendChat(c.req.param("id"));
     return c.redirect("/admin");
   });
 

@@ -43,12 +43,13 @@ export function publicRoutes(cfg: AppConfig) {
   app.get("/s/:id", (c) => {
     const id = c.req.param("id");
     const row = getChat(id);
-    if (!row) return c.body(gonePageHtml("revoked"), 404, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex" });
+    if (!row) return c.body(gonePageHtml("revoked"), 404, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow" });
 
     const { available, status } = availability(row);
     if (!available) {
       const code = status === "expired" ? 410 : 404;
-      return c.body(gonePageHtml(status === "expired" ? "expired" : "revoked"), code, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex" });
+      const reason = status === "expired" ? "expired" : status === "suspended" ? "suspended" : "revoked";
+      return c.body(gonePageHtml(reason), code, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow" });
     }
 
     // Si está protegido y no hay cookie válida, pedir contraseña.
@@ -73,7 +74,7 @@ export function publicRoutes(cfg: AppConfig) {
         locked: !!fresh.password_hash,
       }),
       200,
-      { "Cache-Control": "no-store", "X-Robots-Tag": "noindex" }
+      { "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow" }
     );
   });
 

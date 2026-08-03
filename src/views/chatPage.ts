@@ -292,12 +292,19 @@ ${THEME_CSS}
 </html>`;
 }
 
-export function gonePageHtml(reason: "expired" | "revoked"): string {
-  const title = reason === "expired" ? "Este enlace ha expirado" : "Este enlace ha sido eliminado";
+export function gonePageHtml(reason: "expired" | "revoked" | "suspended"): string {
+  const title =
+    reason === "expired"
+      ? "Este enlace ha expirado"
+      : reason === "suspended"
+        ? "Este enlace no está disponible"
+        : "Este enlace ha sido eliminado";
   const msg =
     reason === "expired"
       ? "El período de publicación de esta conversación terminó."
-      : "El autor retiró este enlace.";
+      : reason === "suspended"
+        ? "El autor suspendió esta conversación temporalmente."
+        : "El autor retiró este enlace.";
   return `<!doctype html>
 <html lang="es">
 <head>

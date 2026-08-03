@@ -73,9 +73,27 @@ export function listChats(limit = 100): SharedChatRow[] {
     .all(limit) as SharedChatRow[];
 }
 
-export function revokeChat(id: string): boolean {
+// Suspender: el enlace deja de ser público, pero no se borra (sigue en la DB).
+export function suspendChat(id: string): boolean {
   const r = db.run("UPDATE shared_chats SET revoked = 1 WHERE id = ?", [id]);
   return r.changes > 0;
+}
+
+// Reactivar: vuelve a estar público.
+export function activateChat(id: string): boolean {
+  const r = db.run("UPDATE shared_chats SET revoked = 0 WHERE id = ?", [id]);
+  return r.changes > 0;
+}
+
+// Eliminar: borrado físico de la DB (el enlace deja de existir).
+export function deleteChat(id: string): boolean {
+  const r = db.run("DELETE FROM shared_chats WHERE id = ?", [id]);
+  return r.changes > 0;
+}
+
+// Alias de compatibilidad: revoke → suspend.
+export function revokeChat(id: string): boolean {
+  return suspendChat(id);
 }
 
 export function incrementViews(id: string): void {
@@ -87,9 +105,9 @@ export function incrementViews(id: string): void {
 
 export function availability(r: SharedChatRow): {
   available: boolean;
-  status: "active" | "expired" | "revoked";
+  status: "active" | "expired" | "suspended";
 } {
-  if (r.revoked) return { available: false, status: "revoked" };
+  if (r.revoked) return { available: false, status: "suspended" };
   if (isExpired(r.expires_at)) return { available: false, status: "expired" };
   return { available: true, status: "active" };
 }

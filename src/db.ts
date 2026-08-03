@@ -50,7 +50,7 @@ export function rowToPublic(r: SharedChatRow, baseUrl: string) {
     created_at: new Date(r.created_at).toISOString(),
     expires_at: r.expires_at ? new Date(r.expires_at).toISOString() : null,
     expired,
-    revoked: !!r.revoked,
+    suspended: !!r.revoked,
     available,
     password_protected: !!r.password_hash,
   };

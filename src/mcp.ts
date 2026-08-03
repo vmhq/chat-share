@@ -2,7 +2,14 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import { z } from "zod";
-import { createSharedChat, getChat, revokeChat } from "./service";
+import {
+  createSharedChat,
+  getChat,
+  listChats,
+  suspendChat,
+  activateChat,
+  deleteChat,
+} from "./service";
 import { baseUrl } from "./util";
 import { rowToPublic } from "./db";
 
@@ -75,16 +82,100 @@ export async function handleMcpRequest(request: Request, authInfo?: AuthInfo): P
     }
   );
 
+  // Listar todos los chats compartidos.
   server.registerTool(
-    "revoke_shared_chat",
-    { description: "Revoca un enlace compartido (lo vuelve inaccesible).", inputSchema: { id: z.string().min(1) } },
-    async ({ id }) => {
-      const ok = revokeChat(id);
+    "list_shared_chats",
+    {
+      description:
+        "Lista los chats compartidos (incluye suspendidos; los eliminados ya no existen). Devuelve id, título, estado, vistas y fechas.",
+      inputSchema: { limit: z.number().int().min(1).max(200).optional() },
+    },
+    ({ limit }) => {
+      const rows = listChats(limit ?? 100);
+      const items = rows.map((r) => rowToPublic(r, baseUrl()));
       return {
         content: [
           {
             type: "text" as const,
-            text: ok ? `Enlace ${id} revocado.` : `No se encontró el enlace ${id}.`,
+            text: items.length
+              ? JSON.stringify(items, null, 2)
+              : "No hay chats compartidos.",
+          },
+        ],
+      };
+    }
+  );
+
+  // Suspender: deja de ser público pero no se borra.
+  server.registerTool(
+    "suspend_shared_chat",
+    {
+      description:
+        "Suspende un enlace compartido: deja de ser público, pero NO se borra. Puedes reactivarlo después con activate_shared_chat.",
+      inputSchema: { id: z.string().min(1) },
+    },
+    ({ id }) => {
+      const ok = suspendChat(id);
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: ok ? `Enlace ${id} suspendido (no es público hasta reactivarlo).` : `No se encontró el enlace ${id}.`,
+          },
+        ],
+      };
+    }
+  );
+
+  // Reactivar: vuelve a estar público.
+  server.registerTool(
+    "activate_shared_chat",
+    {
+      description: "Reactiva un enlace suspendido: vuelve a ser público.",
+      inputSchema: { id: z.string().min(1) },
+    },
+    ({ id }) => {
+      const ok = activateChat(id);
+      return {
+        content: [
+          { type: "text" as const, text: ok ? `Enlace ${id} reactivado.` : `No se encontró el enlace ${id}.` },
+        ],
+      };
+    }
+  );
+
+  // Eliminar: borrado físico.
+  server.registerTool(
+    "delete_shared_chat",
+    {
+      description: "Elimina definitivamente un enlace compartido (borrado físico, no se puede recuperar).",
+      inputSchema: { id: z.string().min(1) },
+    },
+    ({ id }) => {
+      const ok = deleteChat(id);
+      return {
+        content: [
+          { type: "text" as const, text: ok ? `Enlace ${id} eliminado definitivamente.` : `No se encontró el enlace ${id}.` },
+        ],
+      };
+    }
+  );
+
+  // Alias de compatibilidad: revoke → suspend.
+  server.registerTool(
+    "revoke_shared_chat",
+    {
+      description:
+        "Alias de suspend_shared_chat: suspende un enlace compartido (deja de ser público, no se borra).",
+      inputSchema: { id: z.string().min(1) },
+    },
+    ({ id }) => {
+      const ok = suspendChat(id);
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: ok ? `Enlace ${id} suspendido (no es público hasta reactivarlo).` : `No se encontró el enlace ${id}.`,
           },
         ],
       };

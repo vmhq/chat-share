@@ -96,14 +96,61 @@ describe("chat-share API", () => {
     expect(html).toContain("Público");
   });
 
-  test("revocar un chat lo vuelve inaccesible", async () => {
+  test("listar chats (GET /api/chats)", async () => {
+    const app = buildApp();
+    await app.request("/api/chats", {
+      method: "POST",
+      headers: { Authorization: "Bearer testkey", "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "Uno", messages: [{ role: "user", content: "a" }] }),
+    });
+    await app.request("/api/chats", {
+      method: "POST",
+      headers: { Authorization: "Bearer testkey", "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "Dos", messages: [{ role: "user", content: "b" }] }),
+    });
+    const res = await app.request("/api/chats", { headers: { Authorization: "Bearer testkey" } });
+    expect(res.status).toBe(200);
+    const list = (await res.json()) as { title: string; suspended: boolean }[];
+    const titles = list.map((c) => c.title);
+    expect(titles).toContain("Uno");
+    expect(titles).toContain("Dos");
+  });
+
+  test("suspender y reactivar un chat", async () => {
     const app = buildApp();
     const createRes = await app.request("/api/chats", {
       method: "POST",
-      headers: {
-        Authorization: "Bearer testkey",
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: "Bearer testkey", "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "S", messages: [{ role: "user", content: "x" }] }),
+    });
+    const { id } = (await createRes.json()) as { id: string };
+
+    // Activo por defecto → público
+    expect((await app.request(`/s/${id}`)).status).toBe(200);
+
+    // Suspender → deja de ser público pero sigue en la DB
+    const susp = await app.request(`/api/chats/${id}/suspend`, {
+      method: "POST",
+      headers: { Authorization: "Bearer testkey" },
+    });
+    expect(susp.status).toBe(200);
+    expect((await susp.json())).toMatchObject({ ok: true, suspended: true });
+    expect((await app.request(`/s/${id}`)).status).toBe(404);
+
+    // Reactivar → vuelve a estar público
+    const act = await app.request(`/api/chats/${id}/activate`, {
+      method: "POST",
+      headers: { Authorization: "Bearer testkey" },
+    });
+    expect(act.status).toBe(200);
+    expect((await app.request(`/s/${id}`)).status).toBe(200);
+  });
+
+  test("eliminar un chat lo borra de la DB", async () => {
+    const app = buildApp();
+    const createRes = await app.request("/api/chats", {
+      method: "POST",
+      headers: { Authorization: "Bearer testkey", "Content-Type": "application/json" },
       body: JSON.stringify({ title: "R", messages: [{ role: "user", content: "x" }] }),
     });
     const { id } = (await createRes.json()) as { id: string };
