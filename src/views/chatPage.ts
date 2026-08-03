@@ -18,6 +18,14 @@ const ROLE_LABEL: Record<Message["role"], string> = {
   tool: "Herramienta",
 };
 
+// Avatar por rol (emoji en un círculo con color de fondo).
+const ROLE_AVATAR: Record<Message["role"], string> = {
+  user: "🙂",
+  assistant: "✨",
+  system: "⚙️",
+  tool: "🛠️",
+};
+
 export interface ChatPageData {
   id: string;
   title: string;
@@ -36,12 +44,31 @@ function esc(s: string): string {
   })[ch]!);
 }
 
+// Mensaje de asistente/sistema/herramienta: avatar a la izquierda + burbuja.
+function assistantHtml(m: Message, label: string): string {
+  return `<div class="row ${m.role}">
+    <div class="avatar ${m.role}">${ROLE_AVATAR[m.role] ?? "🤖"}</div>
+    <div class="col">
+      <div class="who">${label}${m.name ? `<span class="name">${esc(m.name)}</span>` : ""}</div>
+      <div class="bubble ${m.role}"><div class="body">${renderMarkdown(m.content)}</div></div>
+    </div>
+  </div>`;
+}
+
+// Mensaje de usuario: burbuja alineada a la derecha.
+function userHtml(m: Message): string {
+  return `<div class="row user">
+    <div class="col right">
+      <div class="bubble user"><div class="body">${renderMarkdown(m.content)}</div></div>
+    </div>
+    <div class="avatar user">${ROLE_AVATAR.user}</div>
+  </div>`;
+}
+
 function messageHtml(m: Message): string {
   const label = ROLE_LABEL[m.role] ?? m.role;
-  return `<div class="msg ${m.role}">
-    <div class="meta"><span class="role">${label}</span>${m.name ? `<span class="name">${esc(m.name)}</span>` : ""}</div>
-    <div class="body">${renderMarkdown(m.content)}</div>
-  </div>`;
+  if (m.role === "user") return userHtml(m);
+  return assistantHtml(m, label);
 }
 
 export function chatPageHtml(d: ChatPageData): string {
@@ -57,44 +84,65 @@ export function chatPageHtml(d: ChatPageData): string {
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
-  body { margin: 0; background: #0f1115; color: #e6e6e6; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; line-height: 1.6; }
-  header { padding: 20px 24px; border-bottom: 1px solid #23262e; background: #16181f; }
-  header h1 { margin: 0 0 6px; font-size: 1.3rem; }
-  .meta { color: #8b93a1; font-size: .85rem; }
+  html, body { height: 100%; }
+  body { margin: 0; background: #0f1115; color: #e6e6e6; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; line-height: 1.65; }
+  header { position: sticky; top: 0; z-index: 10; padding: 16px 24px; border-bottom: 1px solid #23262e; background: rgba(22,24,31,.92); backdrop-filter: blur(10px); }
+  .header-inner { max-width: 820px; margin: 0 auto; display: flex; align-items: center; gap: 14px; }
+  .logo { flex: 0 0 auto; width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg,#3b6cff,#8b5cf6); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; box-shadow: 0 4px 14px rgba(59,108,255,.35); }
+  .titles { min-width: 0; }
+  .titles h1 { margin: 0; font-size: 1.15rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta { color: #8b93a1; font-size: .82rem; margin-top: 2px; }
   .meta span { margin-right: 14px; }
-  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 60px; }
-  .msg { border: 1px solid #23262e; border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; background: #171a21; }
-  .msg .meta { margin-bottom: 8px; }
-  .msg .role { font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; }
-  .msg.user .role { color: #7aa2ff; }
-  .msg.assistant .role { color: #7ee0a3; }
-  .msg.system .role { color: #f0b26b; }
-  .msg.tool .role { color: #c79cf0; }
-  .msg .name { margin-left: 8px; font-style: italic; }
-  .msg .body > :first-child { margin-top: 0; }
-  .msg .body > :last-child { margin-bottom: 0; }
-  pre { background: #0d0f14; border: 1px solid #23262e; border-radius: 8px; padding: 12px; overflow-x: auto; }
+  main { max-width: 820px; margin: 0 auto; padding: 24px 16px 48px; display: flex; flex-direction: column; gap: 20px; }
+  .row { display: flex; gap: 12px; align-items: flex-start; }
+  .row.user { justify-content: flex-end; }
+  .avatar { flex: 0 0 auto; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; margin-top: 2px; }
+  .avatar.assistant { background: linear-gradient(135deg,#3b6cff,#8b5cf6); }
+  .avatar.system { background: #3a3f4b; }
+  .avatar.tool { background: #4a3a63; }
+  .avatar.user { background: #23262e; order: 2; }
+  .col { display: flex; flex-direction: column; max-width: 82%; }
+  .col.right { align-items: flex-end; }
+  .who { font-size: .82rem; font-weight: 600; color: #b6bdca; margin: 2px 4px 4px; }
+  .who .name { margin-left: 8px; font-weight: 400; font-style: italic; color: #8b93a1; }
+  .bubble { border-radius: 14px; padding: 12px 16px; }
+  .bubble.assistant, .bubble.system, .bubble.tool { background: #1b1e26; border: 1px solid #262a34; border-top-left-radius: 4px; }
+  .bubble.user { background: #2b3a6b; border: 1px solid #3a4f8a; border-top-right-radius: 4px; }
+  .bubble .body > :first-child { margin-top: 0; }
+  .bubble .body > :last-child { margin-bottom: 0; }
+  pre { background: #0d0f14; border: 1px solid #23262e; border-radius: 8px; padding: 12px; overflow-x: auto; margin: 8px 0; white-space: pre-wrap; word-break: break-word; }
   code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; }
   p code, li code { background: #23262e; padding: 2px 5px; border-radius: 4px; }
   blockquote { border-left: 3px solid #3a3f4b; margin-left: 0; padding-left: 14px; color: #b6bdca; }
   table { border-collapse: collapse; }
   th, td { border: 1px solid #2a2e38; padding: 6px 10px; }
   a { color: #7aa2ff; }
+  ul, ol { padding-left: 22px; }
   footer { text-align: center; color: #5b6270; font-size: .8rem; padding: 24px; }
   .locked { max-width: 420px; margin: 60px auto; text-align: center; }
   .locked input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #2a2e38; background: #16181f; color: #e6e6e6; font-size: 1rem; margin: 10px 0; }
   .locked button { width: 100%; padding: 12px; border: 0; border-radius: 8px; background: #3b6cff; color: #fff; font-size: 1rem; cursor: pointer; }
   .error { color: #ff7a7a; }
   .placeholder { color: #8b93a1; }
+  @media (max-width: 600px) {
+    .col { max-width: 100%; }
+    header { padding: 12px 16px; }
+    main { padding: 16px 12px 40px; }
+  }
 </style>
 </head>
 <body>
 <header>
-  <h1>${esc(d.title)}</h1>
-  <div class="meta">
-    <span>👤 ${esc(d.agent)}</span>
-    <span>🕒 ${esc(d.createdAt)}</span>
-    <span>👁️ ${d.views} vistas</span>
+  <div class="header-inner">
+    <div class="logo">💬</div>
+    <div class="titles">
+      <h1>${esc(d.title)}</h1>
+      <div class="meta">
+        <span>👤 ${esc(d.agent)}</span>
+        <span>🕒 ${esc(d.createdAt)}</span>
+        <span>👁️ ${d.views} vistas</span>
+      </div>
+    </div>
   </div>
 </header>
 <main>
