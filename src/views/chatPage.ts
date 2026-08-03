@@ -44,7 +44,7 @@ function esc(s: string): string {
   })[ch]!);
 }
 
-// Mensaje de asistente/sistema/herramienta: avatar a la izquierda + burbuja.
+// Mensaje de asistente: avatar a la izquierda + burbuja (siempre visible).
 function assistantHtml(m: Message, label: string): string {
   return `<div class="row ${m.role}">
     <div class="avatar ${m.role}">${ROLE_AVATAR[m.role] ?? "🤖"}</div>
@@ -53,6 +53,18 @@ function assistantHtml(m: Message, label: string): string {
       <div class="bubble ${m.role}"><div class="body">${renderMarkdown(m.content)}</div></div>
     </div>
   </div>`;
+}
+
+// Mensajes de sistema/herramienta: desplegables (<details>) cerrados por defecto.
+function collapsibleHtml(m: Message, label: string): string {
+  return `<details class="fold ${m.role}">
+    <summary>
+      <span class="fold-avatar ${m.role}">${ROLE_AVATAR[m.role] ?? "🤖"}</span>
+      <span class="fold-label">${label}${m.name ? `<span class="name">${esc(m.name)}</span>` : ""}</span>
+      <span class="chevron" aria-hidden="true">▸</span>
+    </summary>
+    <div class="fold-body ${m.role}"><div class="body">${renderMarkdown(m.content)}</div></div>
+  </details>`;
 }
 
 // Mensaje de usuario: burbuja alineada a la derecha.
@@ -68,6 +80,7 @@ function userHtml(m: Message): string {
 function messageHtml(m: Message): string {
   const label = ROLE_LABEL[m.role] ?? m.role;
   if (m.role === "user") return userHtml(m);
+  if (m.role === "system" || m.role === "tool") return collapsibleHtml(m, label);
   return assistantHtml(m, label);
 }
 
@@ -110,6 +123,20 @@ export function chatPageHtml(d: ChatPageData): string {
   .bubble.user { background: #2b3a6b; border: 1px solid #3a4f8a; border-top-right-radius: 4px; }
   .bubble .body > :first-child { margin-top: 0; }
   .bubble .body > :last-child { margin-bottom: 0; }
+  details.fold { border: 1px solid #262a34; border-radius: 10px; background: #16181f; overflow: hidden; }
+  details.fold summary { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; list-style: none; user-select: none; }
+  details.fold summary::-webkit-details-marker { display: none; }
+  details.fold summary:hover { background: #1a1d25; }
+  .fold-avatar { flex: 0 0 auto; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .8rem; }
+  .fold-avatar.system { background: #3a3f4b; }
+  .fold-avatar.tool { background: #4a3a63; }
+  .fold-label { font-size: .82rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: #b6bdca; flex: 1; }
+  .fold-label .name { margin-left: 8px; font-weight: 400; text-transform: none; font-style: italic; color: #8b93a1; }
+  .chevron { color: #8b93a1; font-size: .8rem; transition: transform .15s ease; }
+  details.fold[open] .chevron { transform: rotate(90deg); }
+  .fold-body { padding: 4px 14px 14px; }
+  .fold-body > .body > :first-child { margin-top: 0; }
+  .fold-body > .body > :last-child { margin-bottom: 0; }
   pre { background: #0d0f14; border: 1px solid #23262e; border-radius: 8px; padding: 12px; overflow-x: auto; margin: 8px 0; white-space: pre-wrap; word-break: break-word; }
   code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; }
   p code, li code { background: #23262e; padding: 2px 5px; border-radius: 4px; }
@@ -148,7 +175,7 @@ export function chatPageHtml(d: ChatPageData): string {
 <main>
   ${messagesHtml}
 </main>
-<footer>Compartido con chat-share · autoalojado</footer>
+<footer>Chat Share - VMHQ</footer>
 </body>
 </html>`;
 }
