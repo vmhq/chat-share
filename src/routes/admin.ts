@@ -125,6 +125,9 @@ export function adminRoutes(cfg: AppConfig, oidc: OidcClient) {
   app.get("/admin/logout", (c) => {
     const secure = cfg.cookieSecure ? "; Secure" : "";
     c.header("Set-Cookie", `${SESSION_COOKIE}=; HttpOnly; Path=/admin; SameSite=Lax${secure}; Max-Age=0`);
+    // RP-initiated logout: cerrar también la sesión SSO de PocketID.
+    const logoutUrl = oidc.logoutUrl(`${cfg.baseUrl}/admin/login`);
+    if (logoutUrl) return c.redirect(logoutUrl);
     return c.redirect("/admin/login");
   });
 

@@ -67,8 +67,9 @@ export function adminPageHtml(rows: AdminViewRow[], userEmail: string | undefine
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>chat-share · Panel admin</title>
+<title>Chat Share - Panel de administración</title>
 <meta name="robots" content="noindex">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cg%20clip-path%3D%22url%28%23clip0_378_9639%29%22%3E%3Cpath%20d%3D%22M12%2024C18.6274%2024%2024%2018.6274%2024%2012C24%205.37258%2018.6274%200%2012%200C5.37258%200%200%205.37258%200%2012C0%2018.6274%205.37258%2024%2012%2024Z%22%20fill%3D%22%232781F6%22%2F%3E%3Cpath%20d%3D%22M17.1256%2017.1258H11.5622C8.4955%2017.1258%205.99976%2014.6299%205.99976%2011.5624C8.4955%206%2011.5623%206C14.6298%206%2017.1256%208.49591%2017.1256%2011.5624V17.1258Z%22%20fill%3D%22white%22%20stroke%3D%22white%22%20stroke-width%3D%220.28125%22%2F%3E%3C%2Fg%3E%3Cdefs%3E%3CclipPath%20id%3D%22clip0_378_9639%22%3E%3Crect%20width%3D%2224%22%20height%3D%2224%22%20fill%3D%22white%22%2F%3E%3C%2FclipPath%3E%3C%2Fdefs%3E%3C%2Fsvg%3E">
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
@@ -100,7 +101,7 @@ export function adminPageHtml(rows: AdminViewRow[], userEmail: string | undefine
 </head>
 <body>
 <header>
-  <h1>🖥️ chat-share · Panel de administración</h1>
+  <h1>🖥️ Panel de administración</h1>
   <div class="user">${userEmail ? esc(userEmail) : ""} <a class="logout" href="/admin/logout">Cerrar sesión</a></div>
 </header>
 <main>

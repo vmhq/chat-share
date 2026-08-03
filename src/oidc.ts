@@ -53,6 +53,20 @@ export class OidcClient {
     return `${this.discovery.authorization_endpoint}?${params.toString()}`;
   }
 
+  /**
+   * URL de cierre de sesión RP-initiated (OIDC): redirige al end_session_endpoint
+   * del proveedor (PocketID) para terminar también la sesión SSO del IdP.
+   * Si el proveedor no expone end_session_endpoint, devuelve null (logout solo local).
+   */
+  logoutUrl(postLogoutRedirectUri: string): string | null {
+    if (!this.discovery?.end_session_endpoint) return null;
+    const params = new URLSearchParams({
+      client_id: this.cfg.oidcClientId!,
+      post_logout_redirect_uri: postLogoutRedirectUri,
+    });
+    return `${this.discovery.end_session_endpoint}?${params.toString()}`;
+  }
+
   async exchangeCode(code: string): Promise<{ idToken: string; raw: unknown }> {
     if (!this.discovery) throw new Error("OIDC no inicializado");
     const body = new URLSearchParams({
