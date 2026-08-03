@@ -12,10 +12,11 @@ export function renderMarkdown(content: string): string {
 }
 
 const ROLE_LABEL: Record<Message["role"], string> = {
-  user: "Usuario",
+  user: "Tú",
   assistant: "Asistente",
   system: "Sistema",
   tool: "Herramienta",
+  reasoning: "Cadena de pensamiento",
 };
 
 // Avatar por rol (emoji en un círculo con color de fondo).
@@ -24,7 +25,22 @@ const ROLE_AVATAR: Record<Message["role"], string> = {
   assistant: "✨",
   system: "⚙️",
   tool: "🛠️",
+  reasoning: "🧠",
 };
+
+// "hermes-agent" → "Hermes", "claude-code" → "Claude Code", etc.
+function agentDisplayName(agent: string): string {
+  const clean = agent
+    .replace(/[-_]+/g, " ")
+    .replace(/\bagent\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!clean) return "Asistente";
+  return clean
+    .split(" ")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
 
 export interface ChatPageData {
   id: string;
@@ -52,17 +68,17 @@ function esc(s: string): string {
 }
 
 // Mensaje de asistente: avatar a la izquierda + burbuja (siempre visible).
-function assistantHtml(m: Message, label: string): string {
+function assistantHtml(m: Message, agentName: string): string {
   return `<div class="row ${m.role}">
     <div class="avatar ${m.role}">${ROLE_AVATAR[m.role] ?? "🤖"}</div>
     <div class="col">
-      <div class="who">${label}${m.name ? `<span class="name">${esc(m.name)}</span>` : ""}</div>
+      <div class="who">${esc(agentName)}${m.name && m.name !== agentName ? `<span class="name">${esc(m.name)}</span>` : ""}</div>
       <div class="bubble ${m.role}"><div class="body">${renderMarkdown(m.content)}</div></div>
     </div>
   </div>`;
 }
 
-// Mensajes de sistema/herramienta: desplegables (<details>) cerrados por defecto.
+// Mensajes de herramienta/cadena de pensamiento: desplegables (<details>) cerrados por defecto.
 function collapsibleHtml(m: Message, label: string): string {
   return `<details class="fold ${m.role}">
     <summary>
@@ -74,25 +90,29 @@ function collapsibleHtml(m: Message, label: string): string {
   </details>`;
 }
 
-// Mensaje de usuario: burbuja alineada a la derecha.
+// Mensaje de usuario: burbuja alineada a la derecha, identificado con su nombre.
 function userHtml(m: Message): string {
+  const name = m.name ? esc(m.name) : "Tú";
   return `<div class="row user">
     <div class="col right">
+      <div class="who">${name}</div>
       <div class="bubble user"><div class="body">${renderMarkdown(m.content)}</div></div>
     </div>
     <div class="avatar user">${ROLE_AVATAR.user}</div>
   </div>`;
 }
 
-function messageHtml(m: Message): string {
-  const label = ROLE_LABEL[m.role] ?? m.role;
+function messageHtml(m: Message, agentName: string): string {
   if (m.role === "user") return userHtml(m);
-  if (m.role === "system" || m.role === "tool") return collapsibleHtml(m, label);
-  return assistantHtml(m, label);
+  // "system" se filtra: es ruido técnico, no se muestra.
+  if (m.role === "system") return "";
+  if (m.role === "reasoning" || m.role === "tool") return collapsibleHtml(m, ROLE_LABEL[m.role]);
+  return assistantHtml(m, agentName);
 }
 
 export function chatPageHtml(d: ChatPageData): string {
-  const messagesHtml = d.messages.map(messageHtml).join("");
+  const agentName = agentDisplayName(d.agent);
+  const messagesHtml = d.messages.map((m) => messageHtml(m, agentName)).join("");
   return `<!doctype html>
 <html lang="es">
 <head>
@@ -139,6 +159,7 @@ ${faviconLink()}
   .fold-avatar { flex: 0 0 auto; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .6rem; line-height: 1; }
   .fold-avatar.system { background: rgba(58,63,75,.8); }
   .fold-avatar.tool { background: rgba(74,58,99,.8); }
+  .fold-avatar.reasoning { background: rgba(60,110,90,.8); }
   .fold-label { font-size: .68rem; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; color: #8b93a1; flex: 1; white-space: nowrap; }
   .fold-label .name { margin-left: 6px; font-weight: 400; text-transform: none; font-style: italic; color: #6b7280; }
   .chevron { color: #6b7280; font-size: .7rem; transition: transform .15s ease; }
@@ -176,7 +197,7 @@ ${faviconLink()}
     <div class="titles">
       <h1>${esc(d.title)}</h1>
       <div class="meta">
-        <span>👤 ${esc(d.agent)}</span>
+        <span>👤 ${esc(agentName)}</span>
         <span>🕒 ${esc(d.createdAt)}</span>
         <span>👁️ ${d.views} vistas</span>
       </div>

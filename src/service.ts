@@ -5,7 +5,7 @@ import { hash as argonHash, verify as argonVerify } from "argon2";
 
 // ---------- Validation ----------
 const MessageSchema = z.object({
-  role: z.enum(["user", "assistant", "system", "tool"]),
+  role: z.enum(["user", "assistant", "system", "tool", "reasoning"]),
   content: z.string().min(1),
   name: z.string().max(200).optional(),
   ts: z.number().int().optional(),

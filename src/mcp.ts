@@ -9,7 +9,7 @@ import { rowToPublic } from "./db";
 const messagesSchema = z
   .array(
     z.object({
-      role: z.enum(["user", "assistant", "system", "tool"]),
+      role: z.enum(["user", "assistant", "system", "tool", "reasoning"]),
       content: z.string().min(1),
       name: z.string().max(200).optional(),
       ts: z.number().int().optional(),
