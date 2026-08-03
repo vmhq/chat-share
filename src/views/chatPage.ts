@@ -145,95 +145,178 @@ export function chatPageHtml(d: ChatPageData): string {
 <meta name="robots" content="noindex">
 <meta name="description" content="Conversación compartida">
 ${faviconLink()}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root { color-scheme: dark; }
+  /* ---------- Tema editorial (Marginalia) ---------- */
+  :root {
+    color-scheme: light dark;
+    --font-ui: "Inter", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    --font-serif: "Lora", Georgia, "Times New Roman", serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  html[data-theme="light"] {
+    color-scheme: light;
+    --bg: #faf9f6;
+    --fg: #211f1b;
+    --muted: #6f6a5e;
+    --faint: #9a948a;
+    --surface: #ffffff;
+    --surface-2: #f2f0ea;
+    --border: #e6e2d9;
+    --border-strong: #d4cfc3;
+    --accent: #c2410c;
+    --accent-soft: rgba(194, 65, 12, .08);
+    --user-bubble: #efe6d8;
+    --user-border: #e0d2bc;
+    --code-bg: #f4f2ec;
+    --code-border: #e2ddd2;
+    --shadow: 0 1px 2px rgba(33,31,27,.05), 0 6px 20px rgba(33,31,27,.06);
+  }
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #14130f;
+    --fg: #e8e5df;
+    --muted: #a29c8e;
+    --faint: #6f6a5e;
+    --surface: #1c1a16;
+    --surface-2: #24211c;
+    --border: #2c2923;
+    --border-strong: #3a362e;
+    --accent: #f97316;
+    --accent-soft: rgba(249,115,22,.12);
+    --user-bubble: #2b2518;
+    --user-border: #463a24;
+    --code-bg: #100f0c;
+    --code-border: #2a2720;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+  }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
-  body { margin: 0; background: #0f1115; color: #e6e6e6; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; line-height: 1.65; }
-  header { position: sticky; top: 0; z-index: 10; padding: 16px 24px; border-bottom: 1px solid #23262e; background: rgba(22,24,31,.92); backdrop-filter: blur(10px); }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-ui); line-height: 1.65; transition: background .25s ease, color .25s ease; }
+  a { color: var(--accent); }
+
+  header { position: sticky; top: 0; z-index: 10; padding: 14px 24px; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter: blur(10px); }
   .header-inner { max-width: 820px; margin: 0 auto; display: flex; align-items: center; gap: 14px; }
-  .logo { flex: 0 0 auto; width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg,#3b6cff,#8b5cf6); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; box-shadow: 0 4px 14px rgba(59,108,255,.35); }
-  .titles { min-width: 0; }
-  .titles h1 { margin: 0; font-size: 1.15rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .meta { color: #8b93a1; font-size: .82rem; margin-top: 2px; }
+  .brandmark { flex: 0 0 auto; font-family: var(--font-serif); font-size: .72rem; font-weight: 600; letter-spacing: .42em; text-transform: uppercase; color: var(--accent); transform: translateX(.42em); }
+  .titles { min-width: 0; flex: 1; }
+  .titles h1 { margin: 0; font-family: var(--font-serif); font-size: 1.2rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta { color: var(--muted); font-size: .8rem; margin-top: 2px; }
   .meta span { margin-right: 14px; }
-  main { max-width: 820px; margin: 0 auto; padding: 24px 16px 48px; display: flex; flex-direction: column; gap: 20px; }
+
+  .theme-toggle { flex: 0 0 auto; display: flex; align-items: center; gap: 2px; border: 1px solid var(--border); border-radius: 999px; padding: 3px; background: var(--surface); }
+  .theme-toggle button { border: 0; background: transparent; cursor: pointer; width: 28px; height: 28px; border-radius: 999px; font-size: .95rem; display: flex; align-items: center; justify-content: center; color: var(--faint); transition: background .15s ease; }
+  .theme-toggle button.active { background: var(--surface-2); color: var(--fg); }
+  .theme-toggle button:hover { color: var(--fg); }
+
+  main { max-width: 820px; margin: 0 auto; padding: 28px 16px 48px; display: flex; flex-direction: column; gap: 22px; }
   .row { display: flex; gap: 12px; align-items: flex-start; }
   .row.user { justify-content: flex-end; }
-  .avatar { flex: 0 0 auto; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; margin-top: 2px; }
-  .avatar.assistant { background: linear-gradient(135deg,#3b6cff,#8b5cf6); }
-  .avatar.system { background: #3a3f4b; }
-  .avatar.tool { background: #4a3a63; }
-  .avatar.user { background: #23262e; order: 2; }
+  .avatar { flex: 0 0 auto; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; margin-top: 2px; background: var(--surface-2); border: 1px solid var(--border); }
+  .avatar.user { order: 2; }
   .col { display: flex; flex-direction: column; max-width: 82%; }
   .col.right { align-items: flex-end; }
-  .who { font-size: .82rem; font-weight: 600; color: #b6bdca; margin: 2px 4px 4px; }
-  .who .name { margin-left: 8px; font-weight: 400; font-style: italic; color: #8b93a1; }
-  .bubble { border-radius: 14px; padding: 12px 16px; }
-  .bubble.assistant, .bubble.system, .bubble.tool { background: #1b1e26; border: 1px solid #262a34; border-top-left-radius: 4px; }
-  .bubble.user { background: #2b3a6b; border: 1px solid #3a4f8a; border-top-right-radius: 4px; }
+  .who { font-size: .78rem; font-weight: 600; letter-spacing: .02em; color: var(--muted); margin: 2px 6px 5px; }
+  .who .name { margin-left: 8px; font-weight: 400; font-style: italic; color: var(--faint); }
+  .bubble { border-radius: 4px 14px 14px 14px; padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); font-family: var(--font-serif); font-size: 1.02rem; }
+  .bubble.user { background: var(--user-bubble); border-color: var(--user-border); border-radius: 14px 4px 14px 14px; }
   .bubble .body > :first-child { margin-top: 0; }
   .bubble .body > :last-child { margin-bottom: 0; }
-  .turn { display: flex; flex-direction: column; gap: 2px; }
+
+  .turn { display: flex; flex-direction: column; gap: 3px; }
   .turn details.fold { margin-left: 44px; }
-  details.fold { border: none; background: transparent; overflow: hidden; width: fit-content; max-width: 100%; opacity: .62; }
+  details.fold { border: none; background: transparent; overflow: hidden; width: fit-content; max-width: 100%; opacity: .6; }
   details.fold summary { display: flex; align-items: center; gap: 6px; padding: 0; cursor: pointer; list-style: none; user-select: none; }
   details.fold summary::-webkit-details-marker { display: none; }
   details.fold:hover { opacity: 1; }
-  .fold-avatar { flex: 0 0 auto; width: 14px; height: 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .5rem; line-height: 1; }
-  .fold-avatar.system { background: rgba(58,63,75,.8); }
-  .fold-avatar.tool { background: rgba(74,58,99,.8); }
-  .fold-avatar.reasoning { background: rgba(60,110,90,.8); }
-  .fold-label { font-size: .62rem; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; white-space: nowrap; }
-  .fold-label .name { margin-left: 5px; font-weight: 400; text-transform: none; font-style: italic; color: #565c66; }
-  .chevron { color: #565c66; font-size: .6rem; transition: transform .15s ease; }
+  .fold-avatar { flex: 0 0 auto; width: 14px; height: 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .5rem; line-height: 1; background: var(--surface-2); border: 1px solid var(--border); }
+  .fold-label { font-family: var(--font-ui); font-size: .62rem; font-weight: 600; text-transform: uppercase; letter-spacing: .09em; color: var(--faint); white-space: nowrap; }
+  .fold-label .name { margin-left: 5px; font-weight: 400; text-transform: none; font-style: italic; letter-spacing: 0; color: var(--faint); }
+  .chevron { color: var(--faint); font-size: .6rem; transition: transform .15s ease; }
   details.fold[open] .chevron { transform: rotate(90deg); }
-  /* Al expandir aparece el recuadro */
-  details.fold[open] { border: 1px solid rgba(150,160,180,.16); background: rgba(150,160,180,.06); border-radius: 8px; padding: 8px 12px; width: 100%; opacity: 1; }
+  details.fold[open] { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 8px 12px; width: 100%; opacity: 1; }
   details.fold[open] summary { padding-bottom: 6px; }
-  details.fold[open] .fold-label { color: #b6bdca; }
-  details.fold[open] .fold-body > .body { font-size: .85rem; }
+  details.fold[open] .fold-label { color: var(--muted); }
+  details.fold[open] .fold-body > .body { font-family: var(--font-serif); font-size: .9rem; }
   .fold-body > .body > :first-child { margin-top: 0; }
   .fold-body > .body > :last-child { margin-bottom: 0; }
-  pre { background: #0d0f14; border: 1px solid #23262e; border-radius: 8px; padding: 12px; overflow-x: auto; margin: 8px 0; white-space: pre-wrap; word-break: break-word; }
-  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; }
-  p code, li code { background: #23262e; padding: 2px 5px; border-radius: 4px; }
-  blockquote { border-left: 3px solid #3a3f4b; margin-left: 0; padding-left: 14px; color: #b6bdca; }
+
+  pre { background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 8px; padding: 12px; overflow-x: auto; margin: 8px 0; white-space: pre-wrap; word-break: break-word; font-family: var(--font-mono); font-size: .88em; }
+  code { font-family: var(--font-mono); font-size: .9em; }
+  p code, li code { background: var(--surface-2); border: 1px solid var(--border); padding: 2px 5px; border-radius: 4px; }
+  blockquote { border-left: 3px solid var(--accent); margin-left: 0; padding-left: 14px; color: var(--muted); }
   table { border-collapse: collapse; }
-  th, td { border: 1px solid #2a2e38; padding: 6px 10px; }
-  a { color: #7aa2ff; }
+  th, td { border: 1px solid var(--border); padding: 6px 10px; }
   ul, ol { padding-left: 22px; }
-  footer { text-align: center; color: #5b6270; font-size: .8rem; padding: 24px; }
+
+  footer { text-align: center; font-family: var(--font-serif); font-size: .66rem; letter-spacing: .4em; text-transform: uppercase; color: var(--faint); padding: 28px 24px 36px; transform: translateX(.2em); }
+
   .locked { max-width: 420px; margin: 60px auto; text-align: center; }
-  .locked input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #2a2e38; background: #16181f; color: #e6e6e6; font-size: 1rem; margin: 10px 0; }
-  .locked button { width: 100%; padding: 12px; border: 0; border-radius: 8px; background: #3b6cff; color: #fff; font-size: 1rem; cursor: pointer; }
-  .error { color: #ff7a7a; }
-  .placeholder { color: #8b93a1; }
+  .locked input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--fg); font-size: 1rem; margin: 10px 0; font-family: var(--font-ui); }
+  .locked button { width: 100%; padding: 12px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font-size: 1rem; cursor: pointer; font-family: var(--font-ui); }
+  .error { color: var(--accent); }
+  .placeholder { color: var(--faint); }
+
   @media (max-width: 600px) {
     .col { max-width: 100%; }
-    header { padding: 12px 16px; }
-    main { padding: 16px 12px 40px; }
+    header { padding: 10px 14px; }
+    main { padding: 20px 12px 40px; }
   }
 </style>
+<script>
+  (function () {
+    // Tema: light | dark | system. Aplica antes del primer paint (evita FOUC).
+    var stored = null;
+    try { stored = localStorage.getItem("cs-theme"); } catch (e) {}
+    if (!stored) stored = "system";
+    function apply(theme) {
+      var resolved = theme === "system"
+        ? (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+        : theme;
+      document.documentElement.setAttribute("data-theme", resolved);
+    }
+    apply(stored);
+    window.__csSetTheme = function (theme) {
+      try { localStorage.setItem("cs-theme", theme); } catch (e) {}
+      apply(theme);
+      // Marca el botón activo
+      document.querySelectorAll(".theme-toggle button").forEach(function (b) {
+        b.classList.toggle("active", b.dataset.theme === theme);
+      });
+    };
+    // Reacciona a cambios de preferencia del sistema cuando está en modo "system".
+    if (stored === "system" && window.matchMedia) {
+      window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () {
+        apply("system");
+      });
+    }
+  })();
+</script>
 </head>
-<body>
+<body data-theme-init>
 <header>
   <div class="header-inner">
-    <div class="logo">💬</div>
+    <div class="brandmark">Chat&nbsp;Share</div>
     <div class="titles">
       <h1>${esc(d.title)}</h1>
       <div class="meta">
-        <span>👤 ${esc(agentName)}</span>
-        <span>🕒 ${esc(d.createdAt)}</span>
-        <span>👁️ ${d.views} vistas</span>
+        <span>${esc(agentName)}</span>
+        <span>${esc(d.createdAt)}</span>
+        <span>${d.views} vistas</span>
       </div>
+    </div>
+    <div class="theme-toggle" role="group" aria-label="Tema">
+      <button type="button" data-theme="light" title="Modo claro" onclick="window.__csSetTheme('light')">☀️</button>
+      <button type="button" data-theme="dark" title="Modo oscuro" onclick="window.__csSetTheme('dark')">🌙</button>
+      <button type="button" data-theme="system" title="Seguir sistema" onclick="window.__csSetTheme('system')">💻</button>
     </div>
   </div>
 </header>
 <main>
   ${messagesHtml}
 </main>
-<footer>Chat Share - VMHQ</footer>
+<footer>Chat&nbsp;Share&nbsp;·&nbsp;VMHQ</footer>
 </body>
 </html>`;
 }
