@@ -6,6 +6,8 @@ import { apiRoutes } from "../src/routes/api";
 import { publicRoutes } from "../src/routes/public";
 import { adminRoutes } from "../src/routes/admin";
 import { OidcClient, issueSession } from "../src/oidc";
+import { adminPageHtml, buildRows } from "../src/views/adminPage";
+import { passwordFormHtml } from "../src/views/chatPage";
 
 // Config de test mínima
 function testCfg() {
@@ -221,3 +223,77 @@ describe("chat-share admin (CSRF)", () => {
     expect(page.status).toBe(404);
   });
 });
+
+describe("chat-share vistas (HTML)", () => {
+  const baseRow = (): SharedChatRowLike => ({
+    id: "abc123",
+    title: 'Título con "comillas" y apóstrofe\'s 🧠',
+    agent: "hermes-agent",
+    messages: JSON.stringify([{ role: "user", content: "hola" }]),
+    password_hash: null,
+    expires_at: null,
+    views: 5,
+    created_at: 1720000000000,
+    last_viewed_at: null,
+    revoked: 0,
+  });
+
+  test("admin: botón eliminar lleva confirmación no-irsepeso y título escapado", () => {
+    const rows = buildRows([baseRow()]);
+    const html = adminPageHtml(rows, "admin@test.cl", "https://x.cl", "tok");
+    // La confirmación NO se inyecta en un handler inline ejecutable.
+    expect(html).not.toContain("onsubmit");
+    // Se expone vía data-confirm con el título escapado para HTML.
+    expect(html).toContain("data-confirm=");
+    expect(html).toContain("¿Eliminar definitivamente");
+    expect(html).toContain("Esta acción no se puede deshacer");
+    // El título con comillas no rompe el atributo.
+    expect(html).toContain('Título con &quot;comillas&quot; y apóstrofe&#39;s 🧠');
+  });
+
+  test("admin: estados traducidos y aria-label, toast accesible", () => {
+    const row = baseRow();
+    const html = adminPageHtml(buildRows([row]), "admin@test.cl", "https://x.cl", "tok");
+    expect(html).toContain('<span class="badge active" aria-label="Estado: Activa">🟢 Activa</span>');
+    expect(html).not.toContain(">🟢 active</span>");
+    expect(html).toContain('<div id="toast" class="toast" role="status" aria-live="polite"></div>');
+    expect(html).toContain('<table aria-label="Conversaciones compartidas">');
+  });
+
+  test("admin: formularios de confirmación reciben handler con data-confirm", () => {
+    const html = adminPageHtml(buildRows([baseRow()]), "a@b.cl", "https://x.cl", "tok");
+    expect(html).toContain("querySelectorAll('form[data-confirm]')");
+    expect(html).toContain("e.preventDefault");
+  });
+
+  test("password: error asociado al input con aria-invalid y descripcion única", () => {
+    const html = passwordFormHtml("abc123", "Contraseña incorrecta");
+    expect(html).toContain('aria-invalid="true"');
+    expect(html).toContain('aria-describedby="conversation-password-error-abc123"');
+    expect(html).toContain('id="conversation-password-error-abc123"');
+    expect(html).toContain('role="alert"');
+    expect(html).toContain('autocomplete="current-password"');
+    expect(html).toContain('<label for="conversation-password">Contraseña</label>');
+  });
+
+  test("password: sin error no marca inválido ni emite id duplicado", () => {
+    const html = passwordFormHtml("abc123");
+    // El input sin error no lleva los atributos de estado inválido.
+    expect(html).not.toContain('required aria-invalid="true"');
+    expect(html).not.toContain('aria-describedby=');
+    expect(html).not.toContain("conversation-password-error-abc123");
+  });
+});
+
+type SharedChatRowLike = {
+  id: string;
+  title: string;
+  agent: string;
+  messages: string;
+  password_hash: string | null;
+  expires_at: number | null;
+  views: number;
+  created_at: number;
+  last_viewed_at: number | null;
+  revoked: 0 | 1;
+};

@@ -57,7 +57,7 @@ export function adminPageHtml(rows: AdminViewRow[], userEmail: string | undefine
       } else if (isSuspended) {
         actions.push(`<form method="post" action="/admin/chats/${esc(r.id)}/activate" class="inline"><input type="hidden" name="_csrf" value="${esc(csrf)}"><button class="copy" type="submit" aria-label="Reactivar ${esc(r.title)}">Reactivar</button></form>`);
       }
-      actions.push(`<form method="post" action="/admin/chats/${esc(r.id)}/delete" class="inline" onsubmit="return confirm('¿Eliminar definitivamente «${esc(r.title)}»? Esta acción no se puede deshacer.');"><input type="hidden" name="_csrf" value="${esc(csrf)}"><button class="danger" type="submit" aria-label="Eliminar ${esc(r.title)}">Eliminar</button></form>`);
+      actions.push(`<form method="post" action="/admin/chats/${esc(r.id)}/delete" class="inline" data-confirm="${esc(`¿Eliminar definitivamente «${r.title}»? Esta acción no se puede deshacer.`)}"><input type="hidden" name="_csrf" value="${esc(csrf)}"><button class="danger" type="submit" aria-label="Eliminar ${esc(r.title)}">Eliminar</button></form>`);
       return `<tr>
         <td><a href="${esc(url)}" target="_blank" rel="noopener">${esc(r.title)}</a><br><span class="dim">${esc(r.id)}</span></td>
         <td>${esc(r.agent)}</td>
@@ -191,6 +191,13 @@ ${THEME_CSS}
       }).catch(function(){
         showToast('No se pudo copiar; copia el enlace manualmente.');
       });
+    });
+  });
+  document.querySelectorAll('form[data-confirm]').forEach(function(form){
+    form.addEventListener('submit', function(e){
+      if (!window.confirm(form.getAttribute('data-confirm') || '¿Confirmas esta acción?')) {
+        e.preventDefault();
+      }
     });
   });
 </script>

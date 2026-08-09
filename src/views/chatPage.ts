@@ -75,8 +75,9 @@ function assistantHtml(m: Message, agentName: string): string {
 // Mensajes de herramienta/cadena de pensamiento: desplegables (<details>) cerrados por defecto.
 // Colapsados = solo texto; al expandir aparece el recuadro.
 function collapsibleHtml(m: Message, label: string): string {
+  const ariaLabel = `Mostrar ${label}${m.name ? ` de ${esc(m.name)}` : ""}`;
   return `<details class="fold ${m.role}">
-    <summary aria-label="Mostrar ${label.toLowerCase()}${m.name ? ` de ${esc(m.name)}` : ""}">
+    <summary aria-label="${ariaLabel}">
       <span class="fold-avatar ${m.role}">${ROLE_AVATAR[m.role] ?? "🤖"}</span>
       <span class="fold-label">${label}${m.name ? `<span class="name">${esc(m.name)}</span>` : ""}</span>
       <span class="chevron" aria-hidden="true">▸</span>
@@ -269,7 +270,7 @@ ${THEME_CSS}
 }
 
 export function passwordFormHtml(id: string, error?: string): string {
-  const errorId = "conversation-password-error";
+  const errorId = `conversation-password-error-${esc(id)}`;
   return `<!doctype html>
 <html lang="es">
 <head>
