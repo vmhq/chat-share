@@ -76,7 +76,7 @@ function assistantHtml(m: Message, agentName: string): string {
 // Colapsados = solo texto; al expandir aparece el recuadro.
 function collapsibleHtml(m: Message, label: string): string {
   return `<details class="fold ${m.role}">
-    <summary>
+    <summary aria-label="Mostrar ${label.toLowerCase()}${m.name ? ` de ${esc(m.name)}` : ""}">
       <span class="fold-avatar ${m.role}">${ROLE_AVATAR[m.role] ?? "🤖"}</span>
       <span class="fold-label">${label}${m.name ? `<span class="name">${esc(m.name)}</span>` : ""}</span>
       <span class="chevron" aria-hidden="true">▸</span>
@@ -165,15 +165,21 @@ ${THEME_CSS}
   .col.right { align-items: flex-end; }
   .who { font-size: .74rem; font-weight: 600; letter-spacing: .03em; color: var(--muted); margin: 1px 6px 5px; }
   .who .name { margin-left: 8px; font-weight: 400; font-style: italic; letter-spacing: 0; color: var(--faint); }
-  .bubble { border-radius: 4px 16px 16px 16px; padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); font-family: var(--font-serif); font-size: 1.02rem; }
+  .bubble { border-radius: 4px 16px 16px 16px; padding: 16px 20px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); font-family: var(--font-serif); font-size: 1.02rem; }
   .bubble.user { background: var(--user-bubble); border-color: var(--user-border); border-radius: 16px 4px 16px 16px; }
   .bubble .body > :first-child { margin-top: 0; }
   .bubble .body > :last-child { margin-bottom: 0; }
+  .bubble .body { line-height: 1.72; }
+  .body h1, .body h2, .body h3 { font-family: var(--font-ui); line-height: 1.3; letter-spacing: -.015em; }
+  .body h1 { font-size: 1.45rem; }
+  .body h2 { font-size: 1.22rem; }
+  .body h3 { font-size: 1.05rem; }
+  .body a { overflow-wrap: anywhere; }
 
   .turn { display: flex; flex-direction: column; gap: 3px; }
   .turn details.fold { margin-left: 44px; }
   details.fold { border: none; background: transparent; overflow: hidden; width: fit-content; max-width: 100%; opacity: .6; }
-  details.fold summary { display: flex; align-items: center; gap: 6px; padding: 0; cursor: pointer; list-style: none; user-select: none; }
+  details.fold summary { display: flex; align-items: center; gap: 6px; min-height: 40px; padding: 4px 0; cursor: pointer; list-style: none; user-select: none; }
   details.fold summary::-webkit-details-marker { display: none; }
   details.fold:hover { opacity: 1; }
   .fold-avatar { flex: 0 0 auto; width: 14px; height: 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .5rem; line-height: 1; background: var(--surface-2); border: 1px solid var(--border); }
@@ -188,10 +194,12 @@ ${THEME_CSS}
   .fold-body > .body > :first-child { margin-top: 0; }
   .fold-body > .body > :last-child { margin-bottom: 0; }
 
-  pre { background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 8px; padding: 12px; overflow-x: auto; margin: 8px 0; white-space: pre-wrap; word-break: break-word; font-family: var(--font-mono); font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 8px; padding: 12px; overflow: auto; max-width: 100%; margin: 8px 0; white-space: pre-wrap; word-break: break-word; font-family: var(--font-mono); font-size: .88em; line-height: 1.55; }
   code { font-family: var(--font-mono); font-size: .9em; }
   p code, li code { background: var(--surface-2); border: 1px solid var(--border); padding: 2px 5px; border-radius: 4px; }
   blockquote { border-left: 3px solid var(--accent); margin-left: 0; padding-left: 14px; color: var(--muted); }
+  .body { overflow-wrap: anywhere; }
+  .body > table { display: block; max-width: 100%; overflow-x: auto; }
   table { border-collapse: collapse; }
   th, td { border: 1px solid var(--border); padding: 6px 10px; }
   ul, ol { padding-left: 22px; }
@@ -203,17 +211,25 @@ ${THEME_CSS}
   footer .footnote { font-family: var(--font-ui); font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
 
   .locked { max-width: 420px; margin: 60px auto; text-align: center; }
+  .locked label { display: block; text-align: left; font-size: .8rem; color: var(--muted); }
   .locked input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--fg); font-size: 1rem; margin: 10px 0; font-family: var(--font-ui); }
-  .locked button { width: 100%; padding: 12px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font-size: 1rem; cursor: pointer; font-family: var(--font-ui); }
+  .locked button { width: 100%; min-height: 44px; padding: 12px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font-size: 1rem; cursor: pointer; font-family: var(--font-ui); }
   .error { color: var(--accent); }
   .placeholder { color: var(--faint); }
 
   @media (max-width: 600px) {
     .col { max-width: 100%; }
     .header-inner { padding: 12px 14px; gap: 12px; }
-    .brand { padding-right: 12px; }
+    .brand { border-right: 0; padding-right: 0; }
+    .brandsub { display: none; }
     .brandmark { letter-spacing: .22em; font-size: .7rem; }
+    .titles h1 { font-size: 1rem; }
+    .meta { font-size: .7rem; gap: 0 8px; }
     main { padding: 24px 14px 40px; }
+    .row { gap: 8px; }
+    .avatar { width: 28px; height: 28px; font-size: .8rem; }
+    .turn details.fold { margin-left: 36px; }
+    .bubble { padding: 14px 16px; }
   }
 </style>
 <script>${THEME_SCRIPT}</script>
@@ -253,6 +269,7 @@ ${THEME_CSS}
 }
 
 export function passwordFormHtml(id: string, error?: string): string {
+  const errorId = "conversation-password-error";
   return `<!doctype html>
 <html lang="es">
 <head>
@@ -269,7 +286,9 @@ ${THEME_CSS}
   .brandmark { font-family: var(--font-serif); font-size: .7rem; font-weight: 600; letter-spacing: .3em; text-transform: uppercase; color: var(--accent); }
   .card h1 { font-family: var(--font-serif); font-size: 1.15rem; margin: 18px 0 6px; }
   .card p { color: var(--muted); font-size: .9rem; margin: 0 0 8px; }
-  .card input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--fg); font-size: 1rem; margin: 14px 0; font-family: var(--font-ui); }
+  .card label { display: block; text-align: left; color: var(--muted); font-size: .82rem; margin-top: 18px; }
+  .card input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--fg); font-size: 1rem; margin: 8px 0 14px; font-family: var(--font-ui); }
+  .card input[aria-invalid="true"] { border-color: var(--danger); }
   .card button { width: 100%; padding: 12px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font-size: 1rem; cursor: pointer; font-family: var(--font-ui); }
   .error { color: var(--accent); font-size: .85rem; }
   .theme-wrap { position: fixed; top: 16px; right: 16px; }
@@ -283,8 +302,9 @@ ${THEME_CSS}
   <h1>🔒 Conversación protegida</h1>
   <p>Ingresa la contraseña para ver esta conversación.</p>
   <form method="post" action="/s/${esc(id)}/unlock">
-    <input type="password" name="password" placeholder="Contraseña" autofocus required>
-    ${error ? `<div class="error">${esc(error)}</div>` : ""}
+    <label for="conversation-password">Contraseña</label>
+    <input id="conversation-password" type="password" name="password" placeholder="Contraseña" autocomplete="current-password" autofocus required${error ? ` aria-invalid="true" aria-describedby="${errorId}"` : ""}>
+    ${error ? `<div id="${errorId}" class="error" role="alert">${esc(error)}</div>` : ""}
     <button type="submit">Ver conversación</button>
   </form>
 </div>
@@ -328,7 +348,7 @@ ${THEME_CSS}
 <body data-theme-init>
 <div class="theme-wrap">${themeToggleHtml()}</div>
 <div class="card">
-  <div class="big">${reason === "expired" ? "⏳" : "🚫"}</div>
+  <div class="big" aria-hidden="true">${reason === "expired" ? "⏳" : "🚫"}</div>
   <h1>${title}</h1>
   <p>${msg}</p>
 </div>

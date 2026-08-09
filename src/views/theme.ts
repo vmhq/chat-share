@@ -28,6 +28,7 @@ html[data-theme="light"] {
   --user-bubble: #d9ecee; --user-border: #b8dade;
   --code-bg: #eff5f6; --code-border: #dbe7e9;
   --shadow: 0 1px 2px rgba(21,38,43,.05), 0 8px 28px rgba(21,38,43,.07);
+  --success: #147a42; --warning: #8a5a00; --danger: #b42318;
 }
 html[data-theme="dark"] {
   color-scheme: dark;
@@ -37,6 +38,7 @@ html[data-theme="dark"] {
   --user-bubble: #0f2830; --user-border: #1c4450;
   --code-bg: #0a1214; --code-border: #1e3237;
   --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.38);
+  --success: #69d391; --warning: #f5c76b; --danger: #ff8b82;
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; }
@@ -44,13 +46,17 @@ body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--fo
 a { color: var(--accent); }
 
 /* Botón único de tema: muestra solo el icono activo, cicla al hacer click. */
-.theme-btn { flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); color: var(--fg); font-size: 1.05rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform .15s ease, border-color .2s ease, background .2s ease; }
+.theme-btn { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); color: var(--fg); font-size: 1.05rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform .15s ease, border-color .2s ease, background .2s ease; }
 .theme-btn:hover { border-color: var(--accent); transform: rotate(20deg); }
+.theme-btn:focus-visible, button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+}
 `;
 
 // El botón solo (el script le pone el icono activo).
 export function themeToggleHtml(): string {
-  return `<button type="button" id="theme-btn" class="theme-btn" title="Cambiar tema"></button>`;
+  return `<button type="button" id="theme-btn" class="theme-btn" title="Cambiar tema" aria-label="Cambiar tema" aria-live="polite"></button>`;
 }
 
 // Script: aplica el tema antes del paint (sin FOUC), cicla system→light→dark, y
@@ -73,7 +79,12 @@ export const THEME_SCRIPT = `
   apply(stored);
   function setIcon(theme) {
     var btn = document.getElementById("theme-btn");
-    if (btn) btn.textContent = ICONS[theme] || ICONS.system;
+    if (btn) {
+      btn.textContent = ICONS[theme] || ICONS.system;
+      var labels = { system: "Tema del sistema", light: "Tema claro", dark: "Tema oscuro" };
+      btn.setAttribute("aria-label", (labels[theme] || labels.system) + ". Pulsa para cambiar");
+      btn.setAttribute("title", labels[theme] || labels.system);
+    }
   }
   function wireButton() {
     var btn = document.getElementById("theme-btn");
